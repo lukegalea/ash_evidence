@@ -17,6 +17,7 @@ path = [
   "AGENTS.md",
   "README.md",
   "REUSE.toml",
+  "docs/*.md",
   "mix.lock",
   "priv/resource_snapshots/**/*.json",
   "scripts/extra-docs.baseline",
