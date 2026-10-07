@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2026 ash_evidence contributors <https://github.com/lukegalea/ash_evidence>
+#
+# SPDX-License-Identifier: MIT
+
+version = 1
+
+# Source files carry their own SPDX header; this annotation covers everything
+# else (prose docs, dotfiles, the lockfile, the scripts' data) so
+# `reuse lint` stays clean from day one — the cautionary example is
+# ash_agent_tools, whose REUSE state ran red until AST-1 fixed it.
+[[annotations]]
+path = [
+  ".credo.exs",
+  ".formatter.exs",
+  ".gitignore",
+  ".github/**/*.yml",
+  "AGENTS.md",
+  "README.md",
+  "REUSE.toml",
+  "mix.lock",
+  "priv/resource_snapshots/**/*.json",
+  "scripts/extra-docs.baseline",
+  "scripts/iron-laws.baseline.json",
+  "usage-rules.md",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 ash_evidence contributors <https://github.com/lukegalea/ash_evidence>"
+SPDX-License-Identifier = "MIT"

@@ -1,0 +1,3 @@
+# ex_doc warnings this repository has reviewed and excused, one per line:
+#   MESSAGE<TAB>PATH
+# Empty for now — see scripts/extra-docs.sh for the exact matching rules.
