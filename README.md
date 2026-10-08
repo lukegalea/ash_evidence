@@ -18,6 +18,21 @@ the package records and scores; it never calls a model. Each retrieval can persi
 `CandidateSet`: the hashes, index versions and ranked ids that prove what was
 searched.
 
+On top of retrieval, **packets and assertions** close the loop: an
+`EvidenceEvaluation` run row (the ParseRun terminal lifecycle), a `Packet` that
+carries **atom ids and ledger observation ids only** — never text, never copied
+answers — and the assertion: a **host-composable fragment**
+(`AshEvidence.Assertions.Fragment`, the Ledger.Fragment pattern — the host's
+AshEvents audit, tenancy and policies apply to the persisted record) whose
+aggregate comes from the versioned, deterministic aggregation rule
+(`AshEvidence.Assertions.Aggregation` — marginals composed as marginals, and the
+fixed invariant that a credible contradiction dominates support). The assertion is
+envelope-class by construction — ids, digests, decimal strings — so it **survives
+document erasure** while the packet, evaluation and candidate sets cascade with the
+version; its dangling references read sanely afterwards and its `record_hash` still
+verifies. `AshEvidence.explanation/1` is the display-time data function for review
+surfaces: cited atom content resolved now, never stored.
+
 ## The contract
 
 **This package records; it never calls an instrument.** There is no HTTP client, no
@@ -37,12 +52,19 @@ verdicts).
 | `AshEvidence.AddressedAtom` | A text span at `seq` within its version (`unique_seq_per_version`), produced by a run, with `source_ids` (the other atoms it derives from) and optional `bbox` (`{x0, y0, x1, y2}`, pixels). Sorted `for_version` / `for_run` reads. Its `text` carries the lexical retrieval leg (`to_tsvector`, GIN-indexed). |
 | `AshEvidence.AtomRepresentation` | The **replaceable projection** of one atom — what the vector leg scores. One per atom (`unique_atom`); `representation` is the text the host chose to project, `embedding` the vector its model produced (`embedding_model` + `embedding_model_version` recorded). Re-projecting voids the stale embedding. The column is a dimensionless pgvector `vector`: dimensionality is the host model's business; exact cosine scan keeps retrieval deterministic, and a host wanting ANN adds an `hnsw` index host-side. |
 | `AshEvidence.CandidateSet` | The durable proof of ONE retrieval: claim + query text **hashes** (never the text itself), lexical config, embedding model + version, k, and the ranked id-shaped candidates. Immutable by action shape; cascades away with its version. |
+| `AshEvidence.EvidenceEvaluation` | One adjudication run (predicate × subject × version × question-set hash): cites the persisted CandidateSets (initial + one per expansion step), records each step's observation **ids**, the instrument profile and call shape. ParseRun's terminal lifecycle (`:pending → :ok | :failed`, no-input closes). Cascades with the version. |
+| `AshEvidence.Packet` | The evidence unit: `candidate_atom_ids`, the observation **join** (`atom_id → %{observation_id, question_hash}` — ledger ids, answers never copied, enforced by validation), `selected`/`limiting_atom_ids`, `missing_dimensions`, `requires_expansion`. Atom ids only, never text. Cascades with its evaluation. |
+| `AshEvidence.Assertions.Fragment` | The assertion — **host-composable** (the host defines the persisted resource on its own base; audit/tenancy/policies are the host's). Frozen disposition vocabulary; distribution as **decimal strings**; the aggregation rule version rides every row; `record_hash` over canonical JSON of inputs only. Envelope-class: survives erasure; packet/evaluation references are opaque (may dangle); the `:record` create is inputs-only with one pure derived change — AshEvents-replay safe by construction. |
 
 Domain surface (`AshEvidence.Domain`): `ingest_document/3`,
 `start_parse_run/2-3`, `mark_parse_run_ok/1`, `mark_parse_run_failed/1`,
 `ingest_atom/4-5`, `atoms_for_version/1`, `atoms_for_run/1`,
-`project_atom/3`, `record_embedding/4`, `representations_for_version/1`,
-`record_candidate_set/1`, `get_candidate_set/1`.
+`atoms_by_ids/1`, `project_atom/3`, `record_embedding/4`,
+`representations_for_version/1`, `record_candidate_set/1`,
+`get_candidate_set/1`, `start_evaluation/1`, `get_evaluation/1`,
+`mark_evaluation_ok/1`, `mark_evaluation_failed/1`,
+`evaluations_for_version/1`, `assemble_packet/1`, `get_packet/1`,
+`record_packet_adjudication/2`, `packets_for_evaluation/1`.
 
 Retrieval surface (`AshEvidence.retrieve/3`, `retrieve!/3` — the engine is
 `AshEvidence.Retrieval`):
@@ -61,6 +83,36 @@ result.by_hypothesis.contradicts   # contrastive set, fused-ranked
 result.candidates                  # merged ranked list; each candidate
                                    # carries score, hypotheses, per-leg ranks
 ```
+
+The adjudication loop the host orchestrates around it (the host calls
+its own judge actions; this package records and composes):
+
+```elixir
+evaluation = Domain.start_evaluation!(%{
+  subject: %{type: "vendor", id: "v-1"},
+  predicate: "judgment:v0:coi#judgments/coverage_valid",
+  document_version_id: version.id,
+  question_set_hash: qset_hash,
+  candidate_set_ids: [result.candidate_set_id],
+  profile: "host-profile", call_shape: :candidate_local
+})
+
+packet = Domain.assemble_packet!(%{
+  evaluation_id: evaluation.id,
+  candidate_atom_ids: ids,
+  candidate_observations: %{id => %{observation_id: obs_id, question_hash: qhash}}
+})
+
+{:ok, aggregate} = AshEvidence.Assertions.Aggregation.aggregate(observations)
+
+# The assertion: a HOST-defined resource including the fragment
+# (AshEvidence.Assertions.Fragment) on its own base — recorded
+# inputs-only; replay-safe by construction; survives erasure.
+```
+
+And for the review surface (AST-57 shape), the explanation data
+function — `AshEvidence.explanation(observations)` — resolves cited
+atom content at display time and never stores it.
 
 ## Provenance
 
@@ -90,10 +142,24 @@ The shapes are ported from the slice-0 private pipeline
   for model-written counter-hypothesis queries; `CandidateSet` is the
   proof a packet cites. Out of scope here: reranking with a model, the
   brute-force sweep, adjudication.
-- **AST-51 (packets)** carries **atom ids only**. The packet builder reads id, seq
-  and text here; anything a packet must not carry (document bytes, text beyond the
-  cited set) stays unexposed on these resources — and a persisted
-  `CandidateSet` proves what the packet's candidates were searched against.
+- **AST-51a (packets + assertions)** — built: the three records, the
+  aggregation rule (v1), the explanation function. The **orchestrator**
+  (the thing that calls judge actions per candidate, narrows
+  `source_enum` to the packet, and runs the proof-growth loop) is the
+  HOST's — the seam mirrors retrieval's own: the host supplies the
+  inference, the package records and composes. That's AST-51b.
+- **AST-51c (eval sets)** — the versioned eval-set resource keyed
+  against `DocumentVersion`s lands per `docs/eval-sets.md`; AC-4's
+  measured thresholds ride it.
+- **AST-51b+ (packets, next)** carries **atom ids only** — enforced by
+  the packet's shape and validation. The admission handoff keys on the
+  assertion (`subject`, `predicate`, `subject_state_digest`,
+  `question_set_hash`) are what the banding→admission→materialiser
+  chain reads; the assertion never touches facts.
+- **The observation envelope** (digest-only state, `record_hash`, payload
+  tombstoning, shadow/calibration mode gate) is the proven slice-0 shape to port when
+  run outcomes need tamper-evidence — `ParseRun` deliberately did not grow it in this
+  ticket.
 - **The observation envelope** (digest-only state, `record_hash`, payload
   tombstoning, shadow/calibration mode gate) is the proven slice-0 shape to port when
   run outcomes need tamper-evidence — `ParseRun` deliberately did not grow it in this
