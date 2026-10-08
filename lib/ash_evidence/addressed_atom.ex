@@ -39,6 +39,16 @@ defmodule AshEvidence.AddressedAtom do
   postgres do
     table "addressed_atoms"
     repo AshEvidence.Repo
+
+    custom_indexes do
+      # The lexical retrieval leg: full-text over the atom's own text,
+      # expression-indexed so `to_tsvector('english', text) @@ tsquery`
+      # scans the GIN instead of the table. The expression must match the
+      # retrieval query verbatim (same config, same argument shape).
+      index ["(to_tsvector('english', text))"],
+        using: "gin",
+        name: "addressed_atoms_text_fts_index"
+    end
   end
 
   actions do

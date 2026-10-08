@@ -4,6 +4,7 @@
     "uuid-ossp",
     "citext",
     "ash-functions",
-    "btree_gist"
+    "btree_gist",
+    "vector"
   ]
 }

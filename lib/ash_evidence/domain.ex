@@ -4,13 +4,16 @@
 
 defmodule AshEvidence.Domain do
   @moduledoc """
-  The Ash domain of the evidence pipeline: document versions, parse runs
-  and addressed atoms.
+  The Ash domain of the evidence pipeline: document versions, parse runs,
+  addressed atoms, their retrieval projections, and the candidate sets
+  retrieval records.
 
   Hosts add this module to their `config :ash, ash_domains` (or call the
   code interfaces directly — they are the intended surface). The code
   interfaces mirror the slice-0 pipeline sequence: ingest a document
-  version, start a parse run, seed/record atoms, close the run.
+  version, start a parse run, seed/record atoms, close the run — and the
+  retrieval seams: project an atom for the vector leg, record the
+  embedding the host's model produced.
 
   `validate_config_inclusion?: false` because this is a library-shipped
   domain: it belongs in the HOST's `ash_domains`, never in this package's
@@ -38,6 +41,25 @@ defmodule AshEvidence.Domain do
 
       define :atoms_for_version, action: :for_version, args: [:document_version_id]
       define :atoms_for_run, action: :for_run, args: [:parse_run_id]
+    end
+
+    resource AshEvidence.AtomRepresentation do
+      define :project_atom,
+        action: :project,
+        args: [:addressed_atom_id, :document_version_id, :representation]
+
+      define :record_embedding,
+        action: :record_embedding,
+        args: [:embedding, :embedding_model, :embedding_model_version]
+
+      define :representations_for_version,
+        action: :for_version,
+        args: [:document_version_id]
+    end
+
+    resource AshEvidence.CandidateSet do
+      define :record_candidate_set, action: :record
+      define :get_candidate_set, action: :read, get_by: [:id]
     end
   end
 end

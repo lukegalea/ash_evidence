@@ -34,7 +34,32 @@ defmodule AshEvidence do
     derived from atoms — retrieval and packets (the consumers) read;
     hosts decide.
 
+  ## Retrieval
+
+  `retrieve/3` (and `retrieve!/3`) is the retrieval seam: hybrid lexical +
+  vector search over one version's atoms, run under competing hypotheses
+  (`:supports` / `:contradicts`, optionally `:exception`), returning
+  ranked candidates with scores and hypothesis labels. The host embeds —
+  pass the claim's embedding via `:vector` and it is scored against the
+  version's `AtomRepresentation` projections; without it, lexical-only.
+  See `AshEvidence.Retrieval`.
+
   See the README for the seams the later tickets hang off and
   `usage-rules.md` for the rules that sync into a consumer's AGENTS.md.
   """
+
+  alias AshEvidence.Retrieval
+
+  @doc """
+  Retrieve candidates for `claim` over `version`'s addressed atoms —
+  hybrid (lexical + vector when an embedding is supplied), dual-hypothesis
+  (`:supports` / `:contradicts` by default, `:exception` opt-in). See
+  `AshEvidence.Retrieval.retrieve/3` for the options.
+  """
+  def retrieve(version_or_id, claim, opts \\ []),
+    do: Retrieval.retrieve(version_or_id, claim, opts)
+
+  @doc "Raising `retrieve/3`."
+  def retrieve!(version_or_id, claim, opts \\ []),
+    do: Retrieval.retrieve!(version_or_id, claim, opts)
 end

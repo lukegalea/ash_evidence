@@ -27,13 +27,17 @@ config :ash, default_string_length_count: :codepoints
 # Defaults so `mix ash.codegen` / `mix ash.migrate` work against the
 # devenv's Postgres with no extra setup; hosts (and the test env, below)
 # override per environment. `priv` is pinned so codegen, migrate and the
-# test helper all agree on where the migrations live.
+# test helper all agree on where the migrations live. `types` carries the
+# pgvector encode/decode (`AshEvidence.PostgrexTypes`) — hosts defining
+# their own Postgrex types module append `AshPostgres.Extensions.Vector`
+# to theirs.
 config :ash_evidence, AshEvidence.Repo,
   username: System.get_env("DB_USER", "postgres"),
   password: System.get_env("DB_PASSWORD", "postgres"),
   hostname: System.get_env("DB_HOST") || System.get_env("PGHOST") || "localhost",
   port: String.to_integer(System.get_env("PGPORT", "5432")),
-  priv: "priv/test_repo"
+  priv: "priv/test_repo",
+  types: AshEvidence.PostgrexTypes
 
 if config_env() == :test do
   import_config "test.exs"

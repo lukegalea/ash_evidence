@@ -73,4 +73,36 @@ defmodule AshEvidence.Test.Fixtures do
       )
     )
   end
+
+  @doc """
+  The embedding model name fixtures use: a SYNTHETIC model label, not a
+  real model id — the package never names (or calls) an embedder, and the
+  fixtures follow the package contract.
+  """
+  def embedder, do: "synthetic-test-embedder"
+
+  @doc """
+  Project an atom for the vector leg (the host-side seam, exercised):
+  representation defaults to the atom's own text.
+  """
+  def project_atom(atom, representation \\ nil) do
+    Domain.project_atom!(
+      atom.id,
+      atom.document_version_id,
+      representation || atom.text
+    )
+  end
+
+  @doc """
+  Record an embedding on a projection — the vector the host's embedder
+  computed for the representation, plus which synthetic model produced it.
+  """
+  def record_embedding(rep, vector, opts \\ []) do
+    Domain.record_embedding!(
+      rep.id,
+      vector,
+      Keyword.get(opts, :model, embedder()),
+      Keyword.get(opts, :version, "1")
+    )
+  end
 end

@@ -8,7 +8,9 @@
   AshEvidence.Domain,
   AshEvidence.DocumentVersion,
   AshEvidence.ParseRun,
-  AshEvidence.AddressedAtom
+  AshEvidence.AddressedAtom,
+  AshEvidence.AtomRepresentation,
+  AshEvidence.CandidateSet
 ]
 |> Enum.each(&Code.ensure_loaded!/1)
 

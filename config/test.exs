@@ -22,7 +22,8 @@ config :ash_evidence, AshEvidence.Repo,
   database: "ash_evidence_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 10,
-  queue_target: 1000
+  queue_target: 1000,
+  types: AshEvidence.PostgrexTypes
 
 # Ash loads relationships in spawned Tasks by default; those processes do
 # not own the sandbox connection and hit DBConnection.OwnershipError
