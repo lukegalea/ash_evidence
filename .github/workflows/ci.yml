@@ -29,7 +29,10 @@ jobs:
       postgres:
         # The declared floor (AshEvidence.Repo.min_pg_version/0) is PG18;
         # the suite creates and migrates its own database on the service.
-        image: postgres:18-alpine
+        # The pgvector-built image, not plain postgres:18 — the retrieval
+        # schema declares the `vector` extension (installed_extensions/0),
+        # and the plain image does not ship it.
+        image: pgvector/pgvector:pg18
         env:
           POSTGRES_HOST_AUTH_METHOD: trust
           TZ: UTC
