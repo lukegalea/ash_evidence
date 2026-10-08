@@ -70,6 +70,13 @@ defmodule AshEvidence.AddressedAtom do
       filter expr(parse_run_id == ^arg(:parse_run_id))
       prepare build(sort: [:seq])
     end
+
+    read :by_ids do
+      description "The explanation surface's batch resolution: cited atom ids to content."
+      argument :ids, {:array, :uuid}, allow_nil?: false
+      filter expr(id in ^arg(:ids))
+      prepare build(load: [:id, :seq, :text, :bbox], sort: [:seq])
+    end
   end
 
   attributes do

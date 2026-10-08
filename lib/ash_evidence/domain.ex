@@ -41,6 +41,22 @@ defmodule AshEvidence.Domain do
 
       define :atoms_for_version, action: :for_version, args: [:document_version_id]
       define :atoms_for_run, action: :for_run, args: [:parse_run_id]
+      define :atoms_by_ids, action: :by_ids, args: [:ids]
+    end
+
+    resource AshEvidence.EvidenceEvaluation do
+      define :start_evaluation, action: :start
+      define :get_evaluation, action: :read, get_by: [:id]
+      define :mark_evaluation_ok, action: :mark_ok
+      define :mark_evaluation_failed, action: :mark_failed
+      define :evaluations_for_version, action: :for_version, args: [:document_version_id]
+    end
+
+    resource AshEvidence.Packet do
+      define :assemble_packet, action: :assemble
+      define :get_packet, action: :read, get_by: [:id]
+      define :record_packet_adjudication, action: :record_adjudication
+      define :packets_for_evaluation, action: :for_evaluation, args: [:evaluation_id]
     end
 
     resource AshEvidence.AtomRepresentation do

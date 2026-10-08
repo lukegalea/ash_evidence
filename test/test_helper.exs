@@ -10,7 +10,11 @@
   AshEvidence.ParseRun,
   AshEvidence.AddressedAtom,
   AshEvidence.AtomRepresentation,
-  AshEvidence.CandidateSet
+  AshEvidence.CandidateSet,
+  AshEvidence.EvidenceEvaluation,
+  AshEvidence.Packet,
+  AshEvidence.Test.HostDomain,
+  AshEvidence.Test.HostAssertion
 ]
 |> Enum.each(&Code.ensure_loaded!/1)
 

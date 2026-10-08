@@ -48,6 +48,7 @@ defmodule AshEvidence do
   `usage-rules.md` for the rules that sync into a consumer's AGENTS.md.
   """
 
+  alias AshEvidence.Explanation
   alias AshEvidence.Retrieval
 
   @doc """
@@ -62,4 +63,12 @@ defmodule AshEvidence do
   @doc "Raising `retrieve/3`."
   def retrieve!(version_or_id, claim, opts \\ []),
     do: Retrieval.retrieve!(version_or_id, claim, opts)
+
+  @doc """
+  The explanation data function: resolve recorded observations into the
+  display items a review surface reads — cited atom content resolved at
+  display time, never stored. See
+  `AshEvidence.Explanation.for_observations/1`.
+  """
+  def explanation(observations), do: Explanation.for_observations(observations)
 end
