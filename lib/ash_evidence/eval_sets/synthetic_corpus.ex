@@ -96,7 +96,8 @@ defmodule AshEvidence.EvalSets.SyntheticCorpus do
           required(:expected_hypothesis) => atom() | nil,
           required(:source) => String.t(),
           required(:license) => String.t(),
-          required(:split) => atom() | nil
+          required(:split) => atom() | nil,
+          optional(:near_duplicate?) => boolean()
         }
 
   @doc "The default corpus seed (fixed — regeneration is byte-stable)."
