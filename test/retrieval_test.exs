@@ -413,8 +413,14 @@ defmodule AshEvidence.RetrievalTest do
       filler ++ ["quokka habitat survey", "quokka habitat report"]
     )
 
-    # Refresh planner stats so the sandboxed rows are what it sees.
+    # Refresh planner stats so the sandboxed rows are what it sees —
+    # though ANALYZE's stats inside this transaction are not reliably
+    # visible to the planner, so the cost-based choice at this table
+    # size stays order-dependent. The invariant under test is that the
+    # index EXISTS and is USABLE for this query shape — so the plan is
+    # taken with sequential scans disabled, then restored.
     AshEvidence.Repo.query!("ANALYZE addressed_atoms")
+    AshEvidence.Repo.query!("SET enable_seqscan = off")
 
     claim = "quokka habitat survey"
     query = Retrieval.framing_queries(claim, [:supports])
@@ -433,6 +439,8 @@ defmodule AshEvidence.RetrievalTest do
 
     %{rows: rows} =
       AshEvidence.Repo.query!(sql, [Ecto.UUID.dump!(version.id), query.supports, 10])
+
+    AshEvidence.Repo.query!("SET enable_seqscan = on")
 
     plan = hd(rows) |> hd()
     index_names = plan |> List.wrap() |> plan_index_names()

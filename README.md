@@ -55,6 +55,7 @@ verdicts).
 | `AshEvidence.EvidenceEvaluation` | One adjudication run (predicate × subject × version × question-set hash): cites the persisted CandidateSets (initial + one per expansion step), records each step's observation **ids**, the instrument profile and call shape. ParseRun's terminal lifecycle (`:pending → :ok | :failed`, no-input closes). Cascades with the version. |
 | `AshEvidence.Packet` | The evidence unit: `candidate_atom_ids`, the observation **join** (`atom_id → %{observation_id, question_hash}` — ledger ids, answers never copied, enforced by validation), `selected`/`limiting_atom_ids`, `missing_dimensions`, `requires_expansion`. Atom ids only, never text. Cascades with its evaluation. |
 | `AshEvidence.Assertions.Fragment` | The assertion — **host-composable** (the host defines the persisted resource on its own base; audit/tenancy/policies are the host's). Frozen disposition vocabulary; distribution as **decimal strings**; the aggregation rule version rides every row; `record_hash` over canonical JSON of inputs only. Envelope-class: survives erasure; packet/evaluation references are opaque (may dangle); the `:record` create is inputs-only with one pure derived change — AshEvents-replay safe by construction. |
+| `AshEvidence.EvalSet` / `AshEvidence.EvalItem` | The eval-set layer: a versioned, split-drawn collection of labelled (document version, claim, expected outcome) items. `:open → :publish` is the one terminal transition; items are immutable and never move between splits (a correction is a new set version); the draw is recorded on the set and reconstructible from its seed; `:audit` rows arrive with their explicit split, never drawn. The shipped synthetic corpus (500 items — supports/contradicts/insufficient with near-duplicate pairs and distractors) is generated CC0; the measured AC-4 false-supports rate lives in `test/ac4_false_supports_test.exs`. See `docs/eval-sets.md` and `docs/eval-corpus.md`. |
 
 Domain surface (`AshEvidence.Domain`): `ingest_document/3`,
 `start_parse_run/2-3`, `mark_parse_run_ok/1`, `mark_parse_run_failed/1`,
@@ -64,7 +65,9 @@ Domain surface (`AshEvidence.Domain`): `ingest_document/3`,
 `get_candidate_set/1`, `start_evaluation/1`, `get_evaluation/1`,
 `mark_evaluation_ok/1`, `mark_evaluation_failed/1`,
 `evaluations_for_version/1`, `assemble_packet/1`, `get_packet/1`,
-`record_packet_adjudication/2`, `packets_for_evaluation/1`.
+`record_packet_adjudication/2`, `packets_for_evaluation/1`,
+`open_eval_set/5`, `get_eval_set/1`, `get_eval_set_by_name_version/2`,
+`publish_eval_set/1`, `add_eval_item/1`, `items_for_set/1`.
 
 Retrieval surface (`AshEvidence.retrieve/3`, `retrieve!/3` — the engine is
 `AshEvidence.Retrieval`):

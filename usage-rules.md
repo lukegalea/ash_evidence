@@ -12,9 +12,11 @@ instrument parse runs (`AshEvidence.ParseRun`), the addressed atoms a pass
 produced (`AshEvidence.AddressedAtom`), their retrieval projections
 (`AshEvidence.AtomRepresentation`), the retrieval proofs
 (`AshEvidence.CandidateSet`), the adjudication run rows and packets
-(`AshEvidence.EvidenceEvaluation`, `AshEvidence.Packet`), and the assertion
+(`AshEvidence.EvidenceEvaluation`, `AshEvidence.Packet`), the assertion
 fragment hosts compose (`AshEvidence.Assertions.Fragment`) with the versioned
-aggregation rule (`AshEvidence.Assertions.Aggregation`).
+aggregation rule (`AshEvidence.Assertions.Aggregation`), and the eval-set
+layer (`AshEvidence.EvalSet`, `AshEvidence.EvalItem`,
+`AshEvidence.EvalSets.Draw`, the synthetic CC0 corpus).
 
 ## What it never does — do not make it
 
@@ -71,6 +73,13 @@ aggregation rule (`AshEvidence.Assertions.Aggregation`).
   tables); packet/evaluation/candidate-set references may dangle — read them
   through `AshEvidence.explanation/1`, which degrades honestly
   (`unresolved_source_ids`).
+- Eval sets are versioned and frozen: items never move between splits and a
+  published set accepts nothing — a correction is a new set version. The
+  draw runs from the set's recorded seed (`EvalSets.Draw`); `:audit` rows
+  arrive with their explicit split and are honoured verbatim, never drawn.
+  Eval-set membership lives on the eval set, never on `AddressedAtom`/
+  `ParseRun`. The shipped corpus is synthetic and CC0-dedicated — real
+  labelled material stays in-region and private (DEC-MOAT).
 - Point `AshEvidence.Repo` at the host's own database (residency is the
   host's concern); PostgreSQL 18 is the declared floor, with the `vector`
   extension installed.

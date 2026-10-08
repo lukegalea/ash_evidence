@@ -13,6 +13,8 @@
   AshEvidence.CandidateSet,
   AshEvidence.EvidenceEvaluation,
   AshEvidence.Packet,
+  AshEvidence.EvalSet,
+  AshEvidence.EvalItem,
   AshEvidence.Test.HostDomain,
   AshEvidence.Test.HostAssertion
 ]
