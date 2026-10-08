@@ -77,5 +77,21 @@ defmodule AshEvidence.Domain do
       define :record_candidate_set, action: :record
       define :get_candidate_set, action: :read, get_by: [:id]
     end
+
+    resource AshEvidence.EvalSet do
+      define :open_eval_set,
+        action: :open,
+        args: [:name, :version, :description, :split_seed, :split_provenance]
+
+      define :get_eval_set, action: :read, get_by: [:id]
+      define :get_eval_set_by_name_version, action: :by_name_version, args: [:name, :version]
+      define :publish_eval_set, action: :publish
+    end
+
+    resource AshEvidence.EvalItem do
+      define :add_eval_item, action: :add
+      define :get_eval_item, action: :read, get_by: [:id]
+      define :items_for_set, action: :for_set, args: [:eval_set_id]
+    end
   end
 end

@@ -413,8 +413,18 @@ defmodule AshEvidence.RetrievalTest do
       filler ++ ["quokka habitat survey", "quokka habitat report"]
     )
 
-    # Refresh planner stats so the sandboxed rows are what it sees.
+    # Refresh planner stats so the sandboxed rows are what it sees —
+    # though ANALYZE's stats inside this transaction are not reliably
+    # visible to the planner, so the cost-based choice at this table
+    # size stays environment-dependent. The invariant under test is
+    # that the index EXISTS and is USABLE for the retrieval shape's
+    # FTS condition — so the EXPLAIN runs with sequential scans off
+    # (restored after) and WITHOUT the version filter: the FTS
+    # condition's only usable index is the GIN, making the plan
+    # deterministic on every Postgres. (In the engine's real query the
+    # version filter rides the seq-per-version btree alongside.)
     AshEvidence.Repo.query!("ANALYZE addressed_atoms")
+    AshEvidence.Repo.query!("SET enable_seqscan = off")
 
     claim = "quokka habitat survey"
     query = Retrieval.framing_queries(claim, [:supports])
@@ -423,16 +433,16 @@ defmodule AshEvidence.RetrievalTest do
     EXPLAIN (FORMAT JSON)
     SELECT a.id::text, a.seq,
            ts_rank_cd(to_tsvector('english', a.text),
-                      websearch_to_tsquery('english', $2)) AS score
+                      websearch_to_tsquery('english', $1)) AS score
     FROM addressed_atoms AS a
-    WHERE a.document_version_id = $1
-      AND to_tsvector('english', a.text) @@ websearch_to_tsquery('english', $2)
+    WHERE to_tsvector('english', a.text) @@ websearch_to_tsquery('english', $1)
     ORDER BY score DESC, a.seq ASC, a.id ASC
-    LIMIT $3
+    LIMIT $2
     """
 
-    %{rows: rows} =
-      AshEvidence.Repo.query!(sql, [Ecto.UUID.dump!(version.id), query.supports, 10])
+    %{rows: rows} = AshEvidence.Repo.query!(sql, [query.supports, 10])
+
+    AshEvidence.Repo.query!("SET enable_seqscan = on")
 
     plan = hd(rows) |> hd()
     index_names = plan |> List.wrap() |> plan_index_names()

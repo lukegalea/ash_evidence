@@ -4,19 +4,22 @@
 
 defmodule AshEvidence.Validations.PendingTransition do
   @moduledoc """
-  A parse run's status moves out of `:pending` exactly once.
+  A record's status leaves its starting state exactly once.
 
-  `:ok` and `:failed` are terminal: a closed run cannot be re-closed (as
-  `:ok` after `:failed`, or at all). This is the run-lifecycle core of the
-  seam: an instrument pass happens once, and the record of how it ended
-  cannot be rewritten afterwards.
+  ParseRun: `:pending` moves to `:ok`/`:failed` once — a closed run
+  cannot be re-closed, and the record of how a pass ended cannot be
+  rewritten. EvalSet: `:open` moves to `:published` once — a published
+  eval set is frozen, and a correction is a new set version.
 
-  Implements both the eager check (read the persisted status off
-  `changeset.data`) and the atomic form, so the update actions that use it
-  keep their default `require_atomic? true`.
+  The starting state is an option (`from:`, default `:pending`); the
+  field is always `status`. Implements both the eager check (read the
+  persisted status off `changeset.data`) and the atomic form, so the
+  update actions that use it keep their default `require_atomic? true`.
   """
 
   use Ash.Resource.Validation
+
+  import Ash.Expr
 
   alias Ash.Error.Changes.InvalidAttribute
 
@@ -24,21 +27,30 @@ defmodule AshEvidence.Validations.PendingTransition do
   def init(opts), do: {:ok, opts}
 
   @impl true
-  def validate(changeset, _opts, _context) do
+  def validate(changeset, opts, _context) do
+    from = Keyword.get(opts, :from, :pending)
+
     case changeset.data && changeset.data.status do
-      :pending -> :ok
-      other -> {:error, field: :status, message: "parse run is no longer pending (#{other})"}
+      ^from ->
+        :ok
+
+      other ->
+        {:error, field: :status, message: "status has already left #{from} (#{other})"}
     end
   end
 
   @impl true
-  def atomic(_changeset, _opts, _context) do
-    {:atomic, [:status], expr(status != :pending),
+  def atomic(_changeset, opts, _context) do
+    # Pin through expression forms (the ash-core builtin pattern —
+    # attribute_does_not_equal): a bare `^var` parses as a reference.
+    opts = Keyword.put_new(opts, :from, :pending)
+
+    {:atomic, [:status], expr(status != ^opts[:from]),
      expr(
        error(^InvalidAttribute, %{
          field: :status,
          value: ^atomic_ref(:status),
-         message: "parse run is no longer pending"
+         message: ^"status has already left #{opts[:from]}"
        })
      )}
   end
