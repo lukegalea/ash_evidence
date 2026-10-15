@@ -58,6 +58,7 @@ verdicts).
 | `AshEvidence.EvalSet` / `AshEvidence.EvalItem` | The eval-set layer: a versioned, split-drawn collection of labelled (document version, claim, expected outcome) items. `:open → :publish` is the one terminal transition; items are immutable and never move between splits (a correction is a new set version); the draw is recorded on the set and reconstructible from its seed; `:audit` rows arrive with their explicit split, never drawn. The shipped synthetic corpus (500 items — supports/contradicts/insufficient with near-duplicate pairs and distractors) is generated CC0; the measured AC-4 false-supports rate lives in `test/ac4_false_supports_test.exs`. See `docs/eval-sets.md` and `docs/eval-corpus.md`. |
 
 Domain surface (`AshEvidence.Domain`): `ingest_document/3`,
+`get_document_version/1`,
 `start_parse_run/2-3`, `mark_parse_run_ok/1`, `mark_parse_run_failed/1`,
 `ingest_atom/4-5`, `atoms_for_version/1`, `atoms_for_run/1`,
 `atoms_by_ids/1`, `project_atom/3`, `record_embedding/4`,
@@ -67,7 +68,7 @@ Domain surface (`AshEvidence.Domain`): `ingest_document/3`,
 `evaluations_for_version/1`, `assemble_packet/1`, `get_packet/1`,
 `record_packet_adjudication/2`, `packets_for_evaluation/1`,
 `open_eval_set/5`, `get_eval_set/1`, `get_eval_set_by_name_version/2`,
-`publish_eval_set/1`, `add_eval_item/1`, `items_for_set/1`.
+`publish_eval_set/1`, `add_eval_item/1`, `get_eval_item/1`, `items_for_set/1`.
 
 Retrieval surface (`AshEvidence.retrieve/3`, `retrieve!/3` — the engine is
 `AshEvidence.Retrieval`):
@@ -151,9 +152,11 @@ The shapes are ported from the slice-0 private pipeline
   `source_enum` to the packet, and runs the proof-growth loop) is the
   HOST's — the seam mirrors retrieval's own: the host supplies the
   inference, the package records and composes. That's AST-51b.
-- **AST-51c (eval sets)** — the versioned eval-set resource keyed
-  against `DocumentVersion`s lands per `docs/eval-sets.md`; AC-4's
-  measured thresholds ride it.
+- **AST-51c (eval sets)** — built: `EvalSet` / `EvalItem`, versioned and
+  keyed against `DocumentVersion`s, with the seeded split draw and the
+  synthetic CC0 corpus (see `docs/eval-sets.md`, `docs/eval-corpus.md`);
+  AC-4's measured false-supports rate rides it
+  (`test/ac4_false_supports_test.exs`).
 - **AST-51b+ (packets, next)** carries **atom ids only** — enforced by
   the packet's shape and validation. The admission handoff keys on the
   assertion (`subject`, `predicate`, `subject_state_digest`,
@@ -163,15 +166,6 @@ The shapes are ported from the slice-0 private pipeline
   tombstoning, shadow/calibration mode gate) is the proven slice-0 shape to port when
   run outcomes need tamper-evidence — `ParseRun` deliberately did not grow it in this
   ticket.
-- **The observation envelope** (digest-only state, `record_hash`, payload
-  tombstoning, shadow/calibration mode gate) is the proven slice-0 shape to port when
-  run outcomes need tamper-evidence — `ParseRun` deliberately did not grow it in this
-  ticket.
-- **Eval sets** (later): the clinic-demo format — items with `optimise` /
-  `calibration` / `test` splits, split-before-labelling, immutable splits, the draw
-  recorded beside the items (`splits.json`), audit split drawn from production only —
-  lands as its own resource/docs pair here, versioned against the document versions
-  it exercises. See `docs/eval-sets.md`.
 
 ## Installation
 

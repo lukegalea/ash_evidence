@@ -55,7 +55,8 @@ layer (`AshEvidence.EvalSet`, `AshEvidence.EvalItem`,
   defines it. The `:record` create is inputs-only with one pure derived
   change — keep it that way (replay rebuilds rows, never re-runs a model).
 - Run the aggregation in the orchestrator BEFORE the assertion create, and
-  record `rule_version` with it. A rule recalibration is a NEW version.
+  record its `rule_version` as the assertion's `aggregation_rule_version`.
+  A rule recalibration is a NEW version.
 - Retrieve with `persist?: true` inside an adjudication loop, and cite the
   `candidate_set_id`s on the evaluation — the packet's proof-of-search is
   citation, never duplication.
