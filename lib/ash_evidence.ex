@@ -17,10 +17,11 @@ defmodule AshEvidence do
       neither hides nor implies an instrument call — recording is this
       package's whole job.
     * `AshEvidence.AddressedAtom` — one addressed atom a run produced:
-      a text span at a sequence within its version, with the `source_ids`
-      it cites and its `bbox`. **Atom ids are the only thing downstream
-      packets carry** (the packet discipline) — text and bbox resolve from
-      the store.
+      a text span at a sequence within its version, of a declared `kind`
+      (`AshEvidence.AtomKind`), on a `page`, with the `source_ids` it
+      cites and its normalised `geometry` (`AshEvidence.AtomGeometry`).
+      **Atom ids are the only thing downstream packets carry** (the packet
+      discipline) — text and geometry resolve from the store.
 
   ## What this package never does
 

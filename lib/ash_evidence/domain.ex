@@ -37,7 +37,7 @@ defmodule AshEvidence.Domain do
     resource AshEvidence.AddressedAtom do
       define :ingest_atom,
         action: :ingest,
-        args: [:document_version_id, :parse_run_id, :seq, :text]
+        args: [:document_version_id, :parse_run_id, :seq, :text, :kind]
 
       define :atoms_for_version, action: :for_version, args: [:document_version_id]
       define :atoms_for_run, action: :for_run, args: [:parse_run_id]

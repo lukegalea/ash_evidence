@@ -217,7 +217,8 @@ defmodule AshEvidence.Ac4FalseSupportsTest do
             document_version_id: versions_by_sha[sha(doc.bytes)].id,
             parse_run_id: runs_by_version[versions_by_sha[sha(doc.bytes)].id].id,
             seq: index,
-            text: span
+            text: span,
+            kind: :line
           }
         )
       )

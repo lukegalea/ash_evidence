@@ -30,16 +30,26 @@ defmodule AshEvidence.ExplanationTest do
     {:ok, version: version, run: run, atoms: atoms}
   end
 
-  test "sources resolve to seq, text and bbox at display time", %{
+  test "sources resolve to seq, text, kind, page and geometry at display time", %{
     version: version,
     run: run,
     atoms: [a, b]
   } do
-    bbox = %{x0: 1.0, y0: 2.0, x1: 3.0, y2: 4.0}
+    geometry = %{
+      page_w: 612.0,
+      page_h: 792.0,
+      unit: :pt,
+      rotation_applied: 0.0,
+      bbox: %{x0: 0.1, y0: 0.2, x1: 0.3, y1: 0.4}
+    }
 
     boxed =
       Ash.create!(
-        Fixtures.atom_changeset(version, run, 3, "the boxed clause", %{bbox: bbox}),
+        Fixtures.atom_changeset(version, run, 3, "the boxed clause", %{
+          kind: :region,
+          page: 2,
+          geometry: geometry
+        }),
         action: :ingest,
         authorize?: false
       )
@@ -68,8 +78,15 @@ defmodule AshEvidence.ExplanationTest do
     by_id = Map.new(item.sources, &{&1.atom_id, &1})
     assert by_id[a.id].seq == 1
     assert by_id[a.id].text == "the expiry clause with coordinates"
-    assert by_id[a.id].bbox == nil
-    assert by_id[boxed.id].bbox == bbox
+    assert by_id[a.id].kind == :line
+    assert by_id[a.id].page == nil
+    assert by_id[a.id].geometry == nil
+    assert by_id[boxed.id].kind == :region
+    assert by_id[boxed.id].page == 2
+
+    assert %AshEvidence.AtomGeometry{unit: :pt, bbox: %{x0: 0.1, y0: 0.2, x1: 0.3, y1: 0.4}} =
+             by_id[boxed.id].geometry
+
     assert by_id[b.id].seq == 2
   end
 

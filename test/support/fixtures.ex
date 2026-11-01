@@ -43,14 +43,15 @@ defmodule AshEvidence.Test.Fixtures do
   end
 
   @doc """
-  Seed atoms directly (no instrument): `lines` become seq-ordered spans of
-  the version. Returns them in seq order.
+  Seed atoms directly (no instrument): `lines` become seq-ordered `:line`
+  atoms of the version, without pages or geometry. Returns them in seq
+  order.
   """
   def seed_atoms(version, run, lines) do
     lines
     |> Enum.with_index(1)
     |> Enum.map(fn {text, seq} ->
-      Domain.ingest_atom!(version.id, run.id, seq, text)
+      Domain.ingest_atom!(version.id, run.id, seq, text, :line)
     end)
   end
 
@@ -67,7 +68,8 @@ defmodule AshEvidence.Test.Fixtures do
           document_version_id: version.id,
           parse_run_id: run.id,
           seq: seq,
-          text: text
+          text: text,
+          kind: :line
         },
         extra
       )
