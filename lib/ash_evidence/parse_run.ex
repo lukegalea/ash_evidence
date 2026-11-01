@@ -25,6 +25,24 @@ defmodule AshEvidence.ParseRun do
   what the pass was, never enough to re-run it from here. No model id,
   endpoint or key literal belongs in either.
 
+  ## Page transforms
+
+  When the instrument rotated or deskewed a page before measuring the
+  atoms on it, it records the transform under the `"page_transforms"`
+  config key, so a box (`AshEvidence.AtomGeometry`, measured in the
+  transformed frame) maps back to the page as stored:
+
+      %{
+        "page_transforms" => %{
+          "1" => %{"rotation" => 90.0, "deskew" => -0.4}
+        }
+      }
+
+  Keys are page numbers as strings; `rotation` and `deskew` are degrees,
+  clockwise. Their sum is the atoms' `rotation_applied` on that page. A
+  page the instrument left as stored has no entry. The package records the
+  key and never reads it.
+
   Ported from the slice-0 observation envelope's discipline
   (`AshEnterprise.Evidence.Observation`): status is an enum, transitions
   are named actions, and the record stays. Deltas: the envelope's

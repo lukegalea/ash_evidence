@@ -35,7 +35,7 @@ layer (`AshEvidence.EvalSet`, `AshEvidence.EvalItem`,
   record — including a re-run retrieval or re-adjudication, which are new
   `CandidateSet`/assertion rows, never updates.
 - **Never let text or answers leak.** Atom ids are the packet currency;
-  `text`/`bytes`/`bbox`/`embedding` resolve from the store and are payload
+  `text`/`bytes`/`geometry`/`embedding` resolve from the store and are payload
   class. A `CandidateSet` stores hashes and ids only. A `Packet` stores ids
   and the observation JOIN — the validation rejects any inner key beyond
   `observation_id` + `question_hash`, so a copied answer has nowhere to go.
@@ -57,6 +57,16 @@ layer (`AshEvidence.EvalSet`, `AshEvidence.EvalItem`,
 - Run the aggregation in the orchestrator BEFORE the assertion create, and
   record its `rule_version` as the assertion's `aggregation_rule_version`.
   A rule recalibration is a NEW version.
+- Ingest every atom with its `kind` (`:word`, `:line`, `:cell`, `:region`)
+  and, when the input has pages, its 1-based `page`. Record a box as
+  `geometry` (`AshEvidence.AtomGeometry`): the measured `page_w`/`page_h`
+  in `unit` (`:pt` or `:px`), the `rotation_applied` in degrees, and `bbox`
+  `%{x0, y0, x1, y1}` normalised to `[0, 1]` with a top-left origin —
+  divide by the page size before ingesting, never store raw coordinates.
+  A composite atom (a line, a cell, a region) cites its parts in
+  `source_ids`, in reading order; there are no character offsets. A run
+  that rotated or deskewed a page records it under the run `config`'s
+  `"page_transforms"` key.
 - Retrieve with `persist?: true` inside an adjudication loop, and cite the
   `candidate_set_id`s on the evaluation — the packet's proof-of-search is
   citation, never duplication.

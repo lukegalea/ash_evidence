@@ -9,7 +9,8 @@ defmodule AshEvidence.Explanation do
 
   The explanation IS the evidence — a System One model gives no reasons
   — so the display datum is built from recorded facts only: the cited
-  atoms (id, seq, text, bbox, resolved from the store NOW, at display
+  atoms (id, seq, text, kind, page and geometry, resolved from the store
+  NOW, at display
   time — never stored on the assertion or the packet), plus the
   observation's own recorded fields (disposition, recorded probability,
   question version, model digest) passed in as data.
@@ -49,7 +50,9 @@ defmodule AshEvidence.Explanation do
                 required(:atom_id) => String.t(),
                 required(:seq) => pos_integer(),
                 required(:text) => String.t(),
-                optional(:bbox) => map() | nil
+                required(:kind) => AshEvidence.AtomKind.t(),
+                required(:page) => pos_integer() | nil,
+                required(:geometry) => AshEvidence.AtomGeometry.t() | nil
               }
             ],
             unresolved_source_ids: [String.t()]
@@ -104,7 +107,7 @@ defmodule AshEvidence.Explanation do
     else
       AddressedAtom
       |> Ash.Query.filter(id in ^ids)
-      |> Ash.Query.load([:id, :seq, :text, :bbox])
+      |> Ash.Query.load([:id, :seq, :text, :kind, :page, :geometry])
       |> Ash.read!()
       |> Map.new(&{&1.id, &1})
     end
@@ -115,7 +118,9 @@ defmodule AshEvidence.Explanation do
       atom_id: atom.id,
       seq: atom.seq,
       text: atom.text,
-      bbox: atom.bbox
+      kind: atom.kind,
+      page: atom.page,
+      geometry: atom.geometry
     }
   end
 end

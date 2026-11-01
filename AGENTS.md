@@ -33,7 +33,7 @@ Facts: stdout is pure JSON (parse it; don't eyeball); first invocation pays mix-
 - **Immutability is the product.** `DocumentVersion` must never grow an update action;
   run transitions stay terminal (`:ok`/`:failed` cannot reopen); new facts about a
   document are new records, never mutations.
-- **Atom ids are the packet currency.** `text` and `bbox` are payload class — resolve
+- **Atom ids are the packet currency.** `text` and `geometry` are payload class — resolve
   them from the store; downstream surfaces carry ids (`source_ids` is the narrow set
   the instrument client already filtered).
 - Fixtures are synthetic. No customer data, contract terms, pricing, or private schema

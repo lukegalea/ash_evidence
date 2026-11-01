@@ -6,8 +6,9 @@ parse runs, and the addressed atoms a pass produces.**
 A document enters the pipeline as an immutable, content-hashed version. An instrument
 pass over that version is a *run row* that starts `:pending` and closes once — `:ok`
 or `:failed`. What the pass produced lands as *addressed atoms*: text spans at a
-sequence within the version, carrying the atom ids they cite and their page geometry.
-Atom **ids** are the only thing downstream packets carry; text and bbox resolve from
+sequence within the version, each a declared kind (word, line, cell or region) on a
+page, carrying the atom ids they cite and their normalised page geometry. Atom
+**ids** are the only thing downstream packets carry; text and geometry resolve from
 the store.
 
 On top of that substrate, **retrieval** finds candidates for a claim: hybrid (lexical
@@ -49,7 +50,7 @@ verdicts).
 |---|---|
 | `AshEvidence.DocumentVersion` | The immutable bytes of one document + SHA-256. **No update action exists** — a new rendition is a new version. Content-addressed (`unique_content` on the hash); `bytes` is not public surface. |
 | `AshEvidence.ParseRun` | One instrument pass over a version. Directed, terminal lifecycle: `:pending → :ok` / `:pending → :failed`; the close actions take **no inputs** and a closed run cannot be re-closed. A version may carry many runs (OCR pass, extraction pass, re-parse). `instrument` + `config` pin what the pass was. |
-| `AshEvidence.AddressedAtom` | A text span at `seq` within its version (`unique_seq_per_version`), produced by a run, with `source_ids` (the other atoms it derives from) and optional `bbox` (`{x0, y0, x1, y2}`, pixels). Sorted `for_version` / `for_run` reads. Its `text` carries the lexical retrieval leg (`to_tsvector`, GIN-indexed). |
+| `AshEvidence.AddressedAtom` | A text span at `seq` within its version (`unique_seq_per_version`), produced by a run. `kind` (`AshEvidence.AtomKind`: `:word`, `:line`, `:cell`, `:region`) is required; `page` is 1-based (`nil` only when the input has no pages); optional `geometry` (`AshEvidence.AtomGeometry`: `page_w`, `page_h`, `unit` `:pt`/`:px`, `rotation_applied` degrees, and `bbox` `%{x0, y0, x1, y1}` normalised to `[0, 1]`, origin top-left, `x0 <= x1`, `y0 <= y1`) — an atom with geometry must name its page. `source_ids` are the other atoms it derives from: a `:line`'s are its `:word` atoms in reading order, a `:cell`'s or `:region`'s the atoms inside it. Sorted `for_version` / `for_run` reads. Its `text` carries the lexical retrieval leg (`to_tsvector`, GIN-indexed). A run that rotated or deskewed a page records the transform under its `config`'s `"page_transforms"` key. |
 | `AshEvidence.AtomRepresentation` | The **replaceable projection** of one atom — what the vector leg scores. One per atom (`unique_atom`); `representation` is the text the host chose to project, `embedding` the vector its model produced (`embedding_model` + `embedding_model_version` recorded). Re-projecting voids the stale embedding. The column is a dimensionless pgvector `vector`: dimensionality is the host model's business; exact cosine scan keeps retrieval deterministic, and a host wanting ANN adds an `hnsw` index host-side. |
 | `AshEvidence.CandidateSet` | The durable proof of ONE retrieval: claim + query text **hashes** (never the text itself), lexical config, embedding model + version, k, and the ranked id-shaped candidates. Immutable by action shape; cascades away with its version. |
 | `AshEvidence.EvidenceEvaluation` | One adjudication run (predicate × subject × version × question-set hash): cites the persisted CandidateSets (initial + one per expansion step), records each step's observation **ids**, the instrument profile and call shape. ParseRun's terminal lifecycle (`:pending → :ok | :failed`, no-input closes). Cascades with the version. |
@@ -60,7 +61,7 @@ verdicts).
 Domain surface (`AshEvidence.Domain`): `ingest_document/3`,
 `get_document_version/1`,
 `start_parse_run/2-3`, `mark_parse_run_ok/1`, `mark_parse_run_failed/1`,
-`ingest_atom/4-5`, `atoms_for_version/1`, `atoms_for_run/1`,
+`ingest_atom/5-6`, `atoms_for_version/1`, `atoms_for_run/1`,
 `atoms_by_ids/1`, `project_atom/3`, `record_embedding/4`,
 `representations_for_version/1`, `record_candidate_set/1`,
 `get_candidate_set/1`, `start_evaluation/1`, `get_evaluation/1`,
@@ -127,7 +128,7 @@ The shapes are ported from the slice-0 private pipeline
   slice-0's `subject_ref` and zone data-class/residency machinery are host posture,
   not pipeline; content addressing replaces subject-scoped uniqueness.
 - `TextAtom` → `AddressedAtom` (seq + text, `unique_seq_per_version`, sorted read) —
-  deltas: atoms hang off a run, and carry `source_ids` + `bbox`.
+  deltas: atoms hang off a run, and carry `source_ids`, `kind`, `page` and `geometry`.
 - `Observation` → partially `ParseRun` (enum status, named no-input transitions,
   honest failure) — deltas: the envelope's digest-only machinery (`state_digest`,
   `record_hash`, `raw` + tombstoning) and the shadow/calibration mode gate are NOT
