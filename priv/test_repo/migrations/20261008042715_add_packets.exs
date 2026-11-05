@@ -35,7 +35,7 @@ defmodule AshEvidence.Repo.Migrations.AddPackets do
           column: :id,
           name: "evidence_evaluations_document_version_id_fkey",
           type: :uuid,
-          prefix: "public",
+          prefix: prefix(),
           on_delete: :delete_all
         ), null: false)
     end
@@ -60,7 +60,7 @@ defmodule AshEvidence.Repo.Migrations.AddPackets do
           column: :id,
           name: "evidence_packets_evaluation_id_fkey",
           type: :uuid,
-          prefix: "public",
+          prefix: prefix(),
           on_delete: :delete_all
         ), null: false)
     end

@@ -45,7 +45,7 @@ defmodule AshEvidence.Repo.Migrations.InitialResources do
           column: :id,
           name: "addressed_atoms_document_version_id_fkey",
           type: :uuid,
-          prefix: "public"
+          prefix: prefix()
         )
       )
     end
@@ -76,7 +76,7 @@ defmodule AshEvidence.Repo.Migrations.InitialResources do
           column: :id,
           name: "addressed_atoms_parse_run_id_fkey",
           type: :uuid,
-          prefix: "public"
+          prefix: prefix()
         )
       )
     end
@@ -97,7 +97,7 @@ defmodule AshEvidence.Repo.Migrations.InitialResources do
           column: :id,
           name: "parse_runs_document_version_id_fkey",
           type: :uuid,
-          prefix: "public"
+          prefix: prefix()
         ), null: false)
     end
   end

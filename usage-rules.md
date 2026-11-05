@@ -93,4 +93,7 @@ layer (`AshEvidence.EvalSet`, `AshEvidence.EvalItem`,
   labelled material stays in-region and private (DEC-MOAT).
 - Point `AshEvidence.Repo` at the host's own database (residency is the
   host's concern); PostgreSQL 18 is the declared floor, with the `vector`
-  extension installed.
+  extension installed. A host with its own schema sets `default_prefix:` and
+  `migration_default_prefix:` (same repo config) to it and puts it first on
+  the repo's `search_path`; a migration resolves a foreign key with
+  `prefix()`, never a literal `"public"`.

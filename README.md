@@ -185,6 +185,22 @@ add `AshEvidence.Domain` to your `config :ash, ash_domains`. PostgreSQL 18 is th
 declared floor (`min_pg_version/0`); `btree_gist`, `uuid-ossp`, `citext`,
 `ash-functions` and `vector` (pgvector) are the installed extensions.
 
+The tables live in `public` unless the host says otherwise. A host that keeps its
+tables in a schema of its own sets `default_prefix:` and `migration_default_prefix:`
+under the same repo config to that schema and puts it first on the repo's
+`search_path`:
+
+```elixir
+config :ash_evidence, AshEvidence.Repo,
+  default_prefix: "evidence",
+  migration_default_prefix: "evidence",
+  parameters: [search_path: "evidence,public"]
+```
+
+The tables, foreign keys and migration history then all land in that schema, and
+reads and writes go there: the resources name no schema, so their queries resolve
+through the search path, and the migrations use `prefix()`, never a literal schema.
+
 ## Development
 
 Any PostgreSQL 18 works. The suite reads the usual env vars (`DB_USER`, `DB_PASSWORD`,

@@ -39,7 +39,7 @@ defmodule AshEvidence.Repo.Migrations.AddRetrieval do
           column: :id,
           name: "atom_representations_addressed_atom_id_fkey",
           type: :uuid,
-          prefix: "public",
+          prefix: prefix(),
           on_delete: :delete_all
         ), null: false)
     end
@@ -55,7 +55,7 @@ defmodule AshEvidence.Repo.Migrations.AddRetrieval do
           column: :id,
           name: "atom_representations_document_version_id_fkey",
           type: :uuid,
-          prefix: "public",
+          prefix: prefix(),
           on_delete: :delete_all
         ), null: false)
     end
@@ -84,7 +84,7 @@ defmodule AshEvidence.Repo.Migrations.AddRetrieval do
           column: :id,
           name: "candidate_sets_document_version_id_fkey",
           type: :uuid,
-          prefix: "public",
+          prefix: prefix(),
           on_delete: :delete_all
         ), null: false)
     end
