@@ -22,9 +22,32 @@ defmodule AshEvidence.Repo do
   at the package's PostgrexTypes module (see
   `AshPostgres.Extensions.Vector` for the shape) — the binary
   encode/decode for vector values.
+
+  The schema is host configuration too: `default_prefix:` under the repo's
+  config names the schema the evidence tables live in, `"public"` when unset
+  (`default_prefix/0`). A host that keeps its own tables in a schema of its
+  own (sharing a database with another system's `public`, say) sets it, and
+  `migration_default_prefix:` to the same schema, and puts that schema first
+  on the repo's `search_path` (`parameters: [search_path: "evidence,public"]`).
+  The tables and the migration history then land there, and reads and writes
+  find them there: the resources name no schema, so their queries resolve
+  through the search path, and the migrations resolve their foreign keys
+  with `prefix()`, never a literal schema.
   """
 
   use AshPostgres.Repo, otp_app: :ash_evidence, warn_on_missing_ash_functions?: false
+
+  @doc """
+  The schema the evidence tables are read from and written to: the repo
+  config's `default_prefix:` (`config :ash_evidence, AshEvidence.Repo,
+  default_prefix: "evidence"`), or `"public"`. Read at runtime, from the
+  application environment, because the `init/2` that `use AshPostgres.Repo`
+  defines overwrites any `default_prefix` in the repo config with this
+  callback's answer.
+  """
+  def default_prefix do
+    :ash_evidence |> Application.get_env(__MODULE__, []) |> Keyword.get(:default_prefix, "public")
+  end
 
   def installed_extensions, do: ["uuid-ossp", "citext", "ash-functions", "btree_gist", "vector"]
 

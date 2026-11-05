@@ -41,7 +41,7 @@ defmodule AshEvidence.Repo.Migrations.AddEvalSets do
           column: :id,
           name: "eval_items_document_version_id_fkey",
           type: :uuid,
-          prefix: "public",
+          prefix: prefix(),
           on_delete: :delete_all
         ), null: false)
     end
@@ -57,7 +57,7 @@ defmodule AshEvidence.Repo.Migrations.AddEvalSets do
           column: :id,
           name: "eval_items_eval_set_id_fkey",
           type: :uuid,
-          prefix: "public"
+          prefix: prefix()
         )
       )
     end
