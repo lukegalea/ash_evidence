@@ -12,12 +12,43 @@ defmodule AshEvidence.DocumentVersion do
   `destroy`. A new rendition of a document is a NEW version row, never a
   mutation; every run and atom hangs off the version it actually saw.
 
+  ## Tenants
+
+  The resource is multitenant by attribute with `global? true`: the
+  `tenant` attribute holds the host's tenant as `Ash.ToTenant` gives it
+  (a string), and is `nil` for untenanted use. With a tenant, reads see only
+  that tenant's versions and writes are stamped with it. **With no tenant, a
+  read is unscoped and sees every tenant's versions.** A host that tenants
+  passes the tenant on every version read and write; the package has no
+  authorizer, and isolation is the host's.
+
+  Only `DocumentVersion` carries the tenant column; its children (runs,
+  atoms, representations, candidate sets, evaluations, eval items) are
+  keyed by version id. A call that passes `tenant:` is scoped through the
+  version: creates and updates validate that the version exists under that
+  tenant (`AshEvidence.Validations.VersionInTenant`), reads keep only rows
+  whose version is in that tenant (`AshEvidence.Preparations.VersionInTenant`),
+  and `retrieve/3` takes `tenant:` too. With no tenant nothing is scoped.
+  Packets and eval sets are reached through their evaluation or set and are
+  not scoped by tenant themselves.
+
+  Content addressing is per tenant: the same bytes in the same tenant are
+  the same version (`unique_content` is `(tenant, sha256)`, nulls not
+  distinct, so untenanted re-ingest is one row too), and the same bytes in
+  two tenants are two rows.
+
+  ## Erasure
+
+  `AshEvidence.Domain.destroy_document_version/1-2` (takes the version id; pass
+  `tenant:`) reads the version under the tenant, then deletes it; the database cascade removes its parse runs, atoms,
+  representations, candidate sets, evaluations, packets and eval items.
+  Erase host documents only, never corpus versions: eval items that cite a
+  version go with it.
+
   Ported from the slice-0 blob (`AshEnterprise.Evidence.Blob`): bytes,
   content hash, immutable-by-action-shape. Deltas: slice-0 carried
   `subject_ref` and the zone's data-class/residency machinery — host
-  posture, not pipeline; the standalone package content-addresses instead
-  (`unique_content` on the hash), so re-ingesting the same bytes is the
-  same version row.
+  posture, not pipeline; the standalone package content-addresses instead.
   """
 
   use Ash.Resource,
@@ -27,6 +58,12 @@ defmodule AshEvidence.DocumentVersion do
   postgres do
     table "document_versions"
     repo fn _resource, _type -> AshEvidence.repo() end
+  end
+
+  multitenancy do
+    strategy :attribute
+    attribute :tenant
+    global? true
   end
 
   actions do
@@ -45,6 +82,9 @@ defmodule AshEvidence.DocumentVersion do
 
     # Evidence class: the bytes themselves are not public surface. Atom ids
     # are the packet currency, not document content.
+    # The host's tenant as `Ash.ToTenant` gives it. Nil for untenanted use.
+    attribute :tenant, :string, public?: true
+
     attribute :bytes, :binary, allow_nil?: false, public?: false
 
     # Lowercase hex SHA-256 of `bytes`, computed by the caller (the slice-0
@@ -59,9 +99,10 @@ defmodule AshEvidence.DocumentVersion do
   end
 
   identities do
-    # Content addressing: the same bytes are the same version, wherever
-    # they came from. Idempotent re-ingest is an identity conflict, not a
-    # second row.
-    identity :unique_content, [:sha256]
+    # Content addressing, per tenant: the same bytes in the same tenant are
+    # the same version. Idempotent re-ingest is an identity conflict, not a
+    # second row. `nils_distinct?: false` keeps untenanted (tenant NULL)
+    # re-ingest one row too.
+    identity :unique_content, [:sha256], nils_distinct?: false
   end
 end

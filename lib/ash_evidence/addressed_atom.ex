@@ -9,8 +9,9 @@ defmodule AshEvidence.AddressedAtom do
   "OCR/atoms: the addressed text of the document").
 
   Atom **ids** are the only thing instrument packets carry; the text and
-  geometry resolve from the store, and are deleted with the version in the
-  host's erasure linkage (both resources ship `destroy` for exactly that).
+  geometry resolve from the store, and are deleted with the version or the
+  run, by foreign-key cascade (the host's erasure linkage is
+  `AshEvidence.Domain.destroy_document_version/1-2`).
 
   Fields:
 
@@ -53,6 +54,13 @@ defmodule AshEvidence.AddressedAtom do
     table "addressed_atoms"
     repo fn _resource, _type -> AshEvidence.repo() end
 
+    references do
+      # Erasure linkage: atoms die with their version, and with the run that
+      # produced them (a re-parse deletes the old run).
+      reference :document_version, on_delete: :delete
+      reference :parse_run, on_delete: :delete
+    end
+
     custom_indexes do
       # The lexical retrieval leg: full-text over the atom's own text,
       # expression-indexed so `to_tsvector('english', text) @@ tsquery`
@@ -62,6 +70,14 @@ defmodule AshEvidence.AddressedAtom do
         using: "gin",
         name: "addressed_atoms_text_fts_index"
     end
+  end
+
+  validations do
+    validate AshEvidence.Validations.VersionInTenant
+  end
+
+  preparations do
+    prepare AshEvidence.Preparations.VersionInTenant
   end
 
   actions do

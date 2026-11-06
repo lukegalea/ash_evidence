@@ -51,6 +51,8 @@ defmodule AshEvidence.ParseRun do
   ticket — ParseRun is the run row; the observation seam lands with the
   retrieval/packets tickets that need it.
 
+  Deleting a version deletes its runs, by foreign-key cascade.
+
   A version may carry many runs (slice-0's pipeline made three passes per
   blob — OCR, extraction, verification — and a re-parse is a new pass, so
   there is deliberately no unique identity tying a run to one per
@@ -66,6 +68,19 @@ defmodule AshEvidence.ParseRun do
   postgres do
     table "parse_runs"
     repo fn _resource, _type -> AshEvidence.repo() end
+
+    references do
+      # Erasure linkage: a run dies with its version.
+      reference :document_version, on_delete: :delete
+    end
+  end
+
+  validations do
+    validate AshEvidence.Validations.VersionInTenant
+  end
+
+  preparations do
+    prepare AshEvidence.Preparations.VersionInTenant
   end
 
   actions do

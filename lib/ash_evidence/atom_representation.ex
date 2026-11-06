@@ -58,6 +58,14 @@ defmodule AshEvidence.AtomRepresentation do
     end
   end
 
+  validations do
+    validate AshEvidence.Validations.VersionInTenant
+  end
+
+  preparations do
+    prepare AshEvidence.Preparations.VersionInTenant
+  end
+
   actions do
     defaults [:read, :destroy]
 

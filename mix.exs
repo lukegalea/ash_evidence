@@ -5,7 +5,7 @@
 defmodule AshEvidence.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.2.0"
   @description """
   The evidence pipeline substrate for Ash: immutable document versions,
   instrument parse runs, and the addressed atoms a run produces. This
@@ -89,7 +89,8 @@ defmodule AshEvidence.MixProject do
         "GitHub" => "https://github.com/lukegalea/ash_evidence",
         "Usage rules" => "https://github.com/lukegalea/ash_evidence/blob/HEAD/usage-rules.md"
       },
-      files: ~w(lib mix.exs README.md LICENSE LICENSES usage-rules.md docs .formatter.exs)
+      files:
+        ~w(lib mix.exs README.md CHANGELOG.md LICENSE LICENSES usage-rules.md docs .formatter.exs)
     ]
   end
 
@@ -99,6 +100,7 @@ defmodule AshEvidence.MixProject do
       extras:
         [
           "README.md",
+          "CHANGELOG.md",
           "usage-rules.md"
         ] ++ extra_docs()
     ]

@@ -16,6 +16,7 @@ path = [
   ".gitignore",
   ".github/**/*.yml",
   "AGENTS.md",
+  "CHANGELOG.md",
   "README.md",
   "REUSE.toml",
   "docs/*.md",

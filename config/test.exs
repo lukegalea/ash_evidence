@@ -25,6 +25,20 @@ config :ash_evidence, AshEvidence.Repo,
   queue_target: 1000,
   types: AshEvidence.PostgrexTypes
 
+# A stand-in for a host's own repo (test/support/host_repo.ex): the same
+# database, its own sandbox pool, no migrations. The repo-seam test points
+# `config :ash_evidence, :repo` at it.
+config :ash_evidence, AshEvidence.Test.HostRepo,
+  username: System.get_env("DB_USER", "postgres"),
+  password: System.get_env("DB_PASSWORD", "postgres"),
+  hostname: System.get_env("DB_HOST") || System.get_env("PGHOST") || "localhost",
+  port: String.to_integer(System.get_env("PGPORT", "5432")),
+  database: "ash_evidence_test#{System.get_env("MIX_TEST_PARTITION")}",
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: 4,
+  queue_target: 1000,
+  types: AshEvidence.PostgrexTypes
+
 # Ash loads relationships in spawned Tasks by default; those processes do
 # not own the sandbox connection and hit DBConnection.OwnershipError
 # intermittently. The standard fix, and what `mix igniter.install
