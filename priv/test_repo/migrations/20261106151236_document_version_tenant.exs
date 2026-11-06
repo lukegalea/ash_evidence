@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 ash_evidence contributors <https://github.com/lukegalea/ash_evidence>
+# SPDX-License-Identifier: MIT
+
 defmodule AshEvidence.Repo.Migrations.DocumentVersionTenant do
   @moduledoc """
   Updates resources based on their most recent snapshots.
