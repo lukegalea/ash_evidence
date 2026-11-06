@@ -4,9 +4,14 @@
 
 defmodule AshEvidence.Repo do
   @moduledoc """
-  The PostgreSQL repo behind the evidence resources.
+  The default repo of the evidence resources, and the owner of their
+  migrations.
 
-  The resources are package-owned and name this repo; the credentials are
+  The resources use `AshEvidence.repo/0`, which answers this module unless
+  the host sets `config :ash_evidence, :repo, MyApp.Repo`. Migrations always
+  ship under this repo: a host that uses its own repo keeps this one
+  configured against the same database (and in `ecto_repos`) so the
+  migrations run; it need not start it at runtime. The credentials are
   host configuration (`config :ash_evidence, AshEvidence.Repo, ...`), as is
   the database itself — a host points the package at its own database, in
   its own residency zone. The `priv` path for migrations is also host

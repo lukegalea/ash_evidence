@@ -26,7 +26,7 @@ defmodule AshEvidence.DocumentVersion do
 
   postgres do
     table "document_versions"
-    repo AshEvidence.Repo
+    repo fn _resource, _type -> AshEvidence.repo() end
   end
 
   actions do

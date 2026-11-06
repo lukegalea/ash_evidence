@@ -51,7 +51,7 @@ defmodule AshEvidence.AddressedAtom do
 
   postgres do
     table "addressed_atoms"
-    repo AshEvidence.Repo
+    repo fn _resource, _type -> AshEvidence.repo() end
 
     custom_indexes do
       # The lexical retrieval leg: full-text over the atom's own text,

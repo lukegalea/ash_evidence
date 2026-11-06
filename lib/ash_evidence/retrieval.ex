@@ -47,7 +47,6 @@ defmodule AshEvidence.Retrieval do
   """
 
   alias AshEvidence.CandidateSet
-  alias AshEvidence.Repo
 
   @framings [:supports, :contradicts, :exception]
   @default_framings [:supports, :contradicts]
@@ -340,7 +339,7 @@ defmodule AshEvidence.Retrieval do
   """
 
   defp lexical_leg(version_id, query, k) do
-    %{rows: rows} = Repo.query!(@lexical_sql, [uuid_param(version_id), query, k])
+    %{rows: rows} = AshEvidence.repo().query!(@lexical_sql, [uuid_param(version_id), query, k])
 
     rows
     |> Enum.with_index(1)
@@ -366,7 +365,7 @@ defmodule AshEvidence.Retrieval do
   defp vector_leg(_version_id, nil, _model, _k), do: []
 
   defp vector_leg(version_id, %Ash.Vector{} = vector, model, k) do
-    %{rows: rows} = Repo.query!(@vector_sql, [uuid_param(version_id), vector, model, k])
+    %{rows: rows} = AshEvidence.repo().query!(@vector_sql, [uuid_param(version_id), vector, model, k])
 
     rows
     |> Enum.with_index(1)

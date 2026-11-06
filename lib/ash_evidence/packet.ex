@@ -42,7 +42,7 @@ defmodule AshEvidence.Packet do
 
   postgres do
     table "evidence_packets"
-    repo AshEvidence.Repo
+    repo fn _resource, _type -> AshEvidence.repo() end
 
     references do
       reference :evaluation, on_delete: :delete

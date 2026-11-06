@@ -42,7 +42,7 @@ defmodule AshEvidence.AtomRepresentation do
 
   postgres do
     table "atom_representations"
-    repo AshEvidence.Repo
+    repo fn _resource, _type -> AshEvidence.repo() end
 
     references do
       # Erasure linkage: representations are projections of content and die

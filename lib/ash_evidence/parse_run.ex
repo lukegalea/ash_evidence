@@ -65,7 +65,7 @@ defmodule AshEvidence.ParseRun do
 
   postgres do
     table "parse_runs"
-    repo AshEvidence.Repo
+    repo fn _resource, _type -> AshEvidence.repo() end
   end
 
   actions do

@@ -40,7 +40,7 @@ defmodule AshEvidence.EvalItem do
 
   postgres do
     table "eval_items"
-    repo AshEvidence.Repo
+    repo fn _resource, _type -> AshEvidence.repo() end
 
     references do
       reference :document_version, on_delete: :delete
