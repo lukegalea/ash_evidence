@@ -32,11 +32,19 @@ defmodule AshEvidence.EvidenceEvaluation do
 
   postgres do
     table "evidence_evaluations"
-    repo AshEvidence.Repo
+    repo fn _resource, _type -> AshEvidence.repo() end
 
     references do
       reference :document_version, on_delete: :delete
     end
+  end
+
+  validations do
+    validate AshEvidence.Validations.VersionInTenant
+  end
+
+  preparations do
+    prepare AshEvidence.Preparations.VersionInTenant
   end
 
   actions do

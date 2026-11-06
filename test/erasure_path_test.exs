@@ -97,21 +97,16 @@ defmodule AshEvidence.ErasurePathTest do
     assert {:ok, _} = Ash.get(EvidenceEvaluation, evaluation.id)
     assert {:ok, _} = Ash.get(CandidateSet, retrieval.candidate_set_id)
 
-    # --- The host's erasure linkage, at the level it lives: the host
-    # deletes the content it owns — atoms first (they cite runs), then
-    # the runs — then the version row; the version cascade takes
-    # evaluations (and their packets) and the candidate sets with it.
-    AshEvidence.Repo.query!("DELETE FROM addressed_atoms WHERE document_version_id = $1", [
-      Ecto.UUID.dump!(version.id)
-    ])
+    # --- The host's erasure linkage: one destroy; the database cascade
+    # takes the runs, atoms, representations, candidate sets, evaluations
+    # and packets with it.
+    AshEvidence.Domain.destroy_document_version!(version.id)
 
-    AshEvidence.Repo.query!("DELETE FROM parse_runs WHERE document_version_id = $1", [
-      Ecto.UUID.dump!(version.id)
-    ])
+    assert [] = AshEvidence.Domain.atoms_for_version!(version.id)
+    assert {:error, _} = Ash.get(AshEvidence.ParseRun, run.id)
 
-    AshEvidence.Repo.query!("DELETE FROM document_versions WHERE id = $1", [
-      Ecto.UUID.dump!(version.id)
-    ])
+    assert [] =
+             AshEvidence.Domain.representations_for_version!(version.id)
 
     # The envelope-class record survives; the blob-class records died.
     assert {:ok, surviving} = Ash.get(HostAssertion, assertion.id)
@@ -167,5 +162,49 @@ defmodule AshEvidence.ErasurePathTest do
                subject_id: "subj-erase"
              })
              |> Ash.read!(authorize?: false)
+  end
+
+  test "a version with two parse runs and an eval item deletes cleanly" do
+    version = Fixtures.ingest_document(81)
+    run_one = Fixtures.start_run(version)
+    run_two = Fixtures.start_run(version, instrument: "second-pass")
+    Fixtures.seed_atoms(version, run_one, ["first pass"])
+    AshEvidence.Domain.ingest_atom!(version.id, run_two.id, 2, "second pass", :line)
+
+    set = AshEvidence.Domain.open_eval_set!("erasure-set", 1, "d", 1, %{})
+
+    [_item] =
+      AshEvidence.EvalSets.draw_and_add_items!(
+        [
+          %{
+            document_version_id: version.id,
+            ordinal: 1,
+            claim: "the coverage period is 12 months",
+            gold_atom_ids: [],
+            expected_disposition: :supports,
+            expected_hypothesis: :supports,
+            source: "test",
+            license: "CC0-1.0"
+          }
+        ],
+        set
+      )
+
+    assert :ok = AshEvidence.Domain.destroy_document_version(version.id)
+    assert [] = AshEvidence.Domain.atoms_for_version!(version.id)
+    assert [] = AshEvidence.Domain.items_for_set!(set.id)
+  end
+
+  test "deleting one parse run takes its atoms and leaves the other run's" do
+    version = Fixtures.ingest_document(82)
+    run_one = Fixtures.start_run(version)
+    run_two = Fixtures.start_run(version, instrument: "second-pass")
+    Fixtures.seed_atoms(version, run_one, ["first pass"])
+    AshEvidence.Domain.ingest_atom!(version.id, run_two.id, 2, "second pass", :line)
+
+    AshEvidence.Repo.query!("DELETE FROM parse_runs WHERE id = $1", [Ecto.UUID.dump!(run_one.id)])
+
+    assert [] = AshEvidence.Domain.atoms_for_run!(run_one.id)
+    assert [_] = AshEvidence.Domain.atoms_for_run!(run_two.id)
   end
 end

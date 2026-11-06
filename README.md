@@ -48,9 +48,9 @@ verdicts).
 
 | Resource | Contract |
 |---|---|
-| `AshEvidence.DocumentVersion` | The immutable bytes of one document + SHA-256. **No update action exists** — a new rendition is a new version. Content-addressed (`unique_content` on the hash); `bytes` is not public surface. |
-| `AshEvidence.ParseRun` | One instrument pass over a version. Directed, terminal lifecycle: `:pending → :ok` / `:pending → :failed`; the close actions take **no inputs** and a closed run cannot be re-closed. A version may carry many runs (OCR pass, extraction pass, re-parse). `instrument` + `config` pin what the pass was. |
-| `AshEvidence.AddressedAtom` | A text span at `seq` within its version (`unique_seq_per_version`), produced by a run. `kind` (`AshEvidence.AtomKind`: `:word`, `:line`, `:cell`, `:region`) is required; `page` is 1-based (`nil` only when the input has no pages); optional `geometry` (`AshEvidence.AtomGeometry`: `page_w`, `page_h`, `unit` `:pt`/`:px`, `rotation_applied` degrees, and `bbox` `%{x0, y0, x1, y1}` normalised to `[0, 1]`, origin top-left, `x0 <= x1`, `y0 <= y1`) — an atom with geometry must name its page. `source_ids` are the other atoms it derives from: a `:line`'s are its `:word` atoms in reading order, a `:cell`'s or `:region`'s the atoms inside it. Sorted `for_version` / `for_run` reads. Its `text` carries the lexical retrieval leg (`to_tsvector`, GIN-indexed). A run that rotated or deskewed a page records the transform under its `config`'s `"page_transforms"` key. |
+| `AshEvidence.DocumentVersion` | The immutable bytes of one document + SHA-256. **No update action exists** — a new rendition is a new version. Content-addressed per tenant (`unique_content` on tenant and hash; multitenant by attribute, `global? true`); `bytes` is not public surface. |
+| `AshEvidence.ParseRun` | One instrument pass over a version. Directed, terminal lifecycle: `:pending → :ok` / `:pending → :failed`; the close actions take **no inputs** and a closed run cannot be re-closed. Deleted with its version by cascade. A version may carry many runs (OCR pass, extraction pass, re-parse). `instrument` + `config` pin what the pass was. |
+| `AshEvidence.AddressedAtom` | A text span at `seq` within its version (`unique_seq_per_version`), produced by a run. `kind` (`AshEvidence.AtomKind`: `:word`, `:line`, `:cell`, `:region`) is required; `page` is 1-based (`nil` only when the input has no pages); optional `geometry` (`AshEvidence.AtomGeometry`: `page_w`, `page_h`, `unit` `:pt`/`:px`, `rotation_applied` degrees, and `bbox` `%{x0, y0, x1, y1}` normalised to `[0, 1]`, origin top-left, `x0 <= x1`, `y0 <= y1`) — an atom with geometry must name its page. `source_ids` are the other atoms it derives from: a `:line`'s are its `:word` atoms in reading order, a `:cell`'s or `:region`'s the atoms inside it. Deleted with its version or its run by cascade. Sorted `for_version` / `for_run` reads. Its `text` carries the lexical retrieval leg (`to_tsvector`, GIN-indexed). A run that rotated or deskewed a page records the transform under its `config`'s `"page_transforms"` key. |
 | `AshEvidence.AtomRepresentation` | The **replaceable projection** of one atom — what the vector leg scores. One per atom (`unique_atom`); `representation` is the text the host chose to project, `embedding` the vector its model produced (`embedding_model` + `embedding_model_version` recorded). Re-projecting voids the stale embedding. The column is a dimensionless pgvector `vector`: dimensionality is the host model's business; exact cosine scan keeps retrieval deterministic, and a host wanting ANN adds an `hnsw` index host-side. |
 | `AshEvidence.CandidateSet` | The durable proof of ONE retrieval: claim + query text **hashes** (never the text itself), lexical config, embedding model + version, k, and the ranked id-shaped candidates. Immutable by action shape; cascades away with its version. |
 | `AshEvidence.EvidenceEvaluation` | One adjudication run (predicate × subject × version × question-set hash): cites the persisted CandidateSets (initial + one per expansion step), records each step's observation **ids**, the instrument profile and call shape. ParseRun's terminal lifecycle (`:pending → :ok | :failed`, no-input closes). Cascades with the version. |
@@ -59,7 +59,7 @@ verdicts).
 | `AshEvidence.EvalSet` / `AshEvidence.EvalItem` | The eval-set layer: a versioned, split-drawn collection of labelled (document version, claim, expected outcome) items. `:open → :publish` is the one terminal transition; items are immutable and never move between splits (a correction is a new set version); the draw is recorded on the set and reconstructible from its seed; `:audit` rows arrive with their explicit split, never drawn. The shipped synthetic corpus (500 items — supports/contradicts/insufficient with near-duplicate pairs and distractors) is generated CC0; the measured AC-4 false-supports rate lives in `test/ac4_false_supports_test.exs`. See `docs/eval-sets.md` and `docs/eval-corpus.md`. |
 
 Domain surface (`AshEvidence.Domain`): `ingest_document/3`,
-`get_document_version/1`,
+`get_document_version/1`, `destroy_document_version/1-2` (takes the version id),
 `start_parse_run/2-3`, `mark_parse_run_ok/1`, `mark_parse_run_failed/1`,
 `ingest_atom/5-6`, `atoms_for_version/1`, `atoms_for_run/1`,
 `atoms_by_ids/1`, `project_atom/3`, `record_embedding/4`,
@@ -178,10 +178,11 @@ def deps do
 end
 ```
 
-The resources are package-owned and name `AshEvidence.Repo`; the host owns the
-database — point the repo at it (`config :ash_evidence, AshEvidence.Repo, ...`,
-including `priv:` for migrations and `types:` for the pgvector encode/decode) and
-add `AshEvidence.Domain` to your `config :ash, ash_domains`. PostgreSQL 18 is the
+The resources are package-owned and use `AshEvidence.repo/0` (`AshEvidence.Repo`
+by default); the host owns the database — point the repo at it
+(`config :ash_evidence, AshEvidence.Repo, ...`, including `priv:` for migrations and
+`types:` for the pgvector encode/decode). Call the `AshEvidence.Domain` code
+interfaces directly and do not list the domain in your `config :ash, ash_domains`. PostgreSQL 18 is the
 declared floor (`min_pg_version/0`); `btree_gist`, `uuid-ossp`, `citext`,
 `ash-functions` and `vector` (pgvector) are the installed extensions.
 
@@ -200,6 +201,23 @@ config :ash_evidence, AshEvidence.Repo,
 The tables, foreign keys and migration history then all land in that schema, and
 reads and writes go there: the resources name no schema, so their queries resolve
 through the search path, and the migrations use `prefix()`, never a literal schema.
+
+### Using your own repo
+
+By default the resources use `AshEvidence.Repo`. To write a version and your own
+records in one transaction, point them at your repo:
+
+```elixir
+config :ash_evidence, :repo, MyApp.Repo
+```
+
+`AshEvidence.repo/0` reads this at runtime; all nine resources and retrieval follow
+it together. Your repo must have the `vector` extension, Postgrex `types:` that
+include `AshPostgres.Extensions.Vector`, PostgreSQL 18, `"ash-functions"` in
+`installed_extensions/0` (the atomic close actions use `error/1`), and a
+`default_prefix/0` naming the schema the evidence migrations ran into. Keep `AshEvidence.Repo`
+configured (and in `ecto_repos`) against the same database so its migrations run,
+and do not add `AshEvidence.Domain` to your own `ash_domains`.
 
 ## Development
 

@@ -46,8 +46,9 @@ defmodule AshEvidence.Retrieval do
   model-written counter-hypothesis queries passes `queries:`.
   """
 
+  require Ash.Query
+
   alias AshEvidence.CandidateSet
-  alias AshEvidence.Repo
 
   @framings [:supports, :contradicts, :exception]
   @default_framings [:supports, :contradicts]
@@ -194,14 +195,34 @@ defmodule AshEvidence.Retrieval do
     * `:persist?` — record an `AshEvidence.CandidateSet` (query text
       hashes, index versions, k, ranked candidates) so a packet can
       prove what was searched. Default `false`.
+    * `:tenant` — when given, the version must exist under that tenant, else
+      `{:error, :document_version_not_found}`; it is also passed to the
+      persisted candidate set.
   """
   @spec retrieve(AshEvidence.DocumentVersion.t() | String.t(), String.t(), keyword()) ::
-          {:ok, Result.t()}
+          {:ok, Result.t()} | {:error, :document_version_not_found}
   def retrieve(version_or_id, claim, opts \\ []) do
     version_id = version_id(version_or_id)
 
     unless is_binary(claim), do: raise(ArgumentError, "claim must be a string")
 
+    with :ok <- check_tenant(version_id, Keyword.get(opts, :tenant)) do
+      do_retrieve(version_id, claim, opts)
+    end
+  end
+
+  defp check_tenant(_version_id, nil), do: :ok
+
+  defp check_tenant(version_id, tenant) do
+    exists? =
+      AshEvidence.DocumentVersion
+      |> Ash.Query.filter(id == ^version_id)
+      |> Ash.exists?(tenant: tenant, authorize?: false)
+
+    if exists?, do: :ok, else: {:error, :document_version_not_found}
+  end
+
+  defp do_retrieve(version_id, claim, opts) do
     framings = framings!(Keyword.get(opts, :hypotheses, @default_framings))
     k = positive_k!(Keyword.get(opts, :k, @default_k))
     queries = framing_queries(claim, framings, Keyword.get(opts, :queries, []))
@@ -233,8 +254,10 @@ defmodule AshEvidence.Retrieval do
   @spec retrieve!(AshEvidence.DocumentVersion.t() | String.t(), String.t(), keyword()) ::
           Result.t()
   def retrieve!(version_or_id, claim, opts \\ []) do
-    {:ok, result} = retrieve(version_or_id, claim, opts)
-    result
+    case retrieve(version_or_id, claim, opts) do
+      {:ok, result} -> result
+      {:error, reason} -> raise ArgumentError, "retrieve failed: #{inspect(reason)}"
+    end
   end
 
   ## Framings and queries
@@ -340,7 +363,7 @@ defmodule AshEvidence.Retrieval do
   """
 
   defp lexical_leg(version_id, query, k) do
-    %{rows: rows} = Repo.query!(@lexical_sql, [uuid_param(version_id), query, k])
+    %{rows: rows} = AshEvidence.repo().query!(@lexical_sql, [uuid_param(version_id), query, k])
 
     rows
     |> Enum.with_index(1)
@@ -366,7 +389,8 @@ defmodule AshEvidence.Retrieval do
   defp vector_leg(_version_id, nil, _model, _k), do: []
 
   defp vector_leg(version_id, %Ash.Vector{} = vector, model, k) do
-    %{rows: rows} = Repo.query!(@vector_sql, [uuid_param(version_id), vector, model, k])
+    %{rows: rows} =
+      AshEvidence.repo().query!(@vector_sql, [uuid_param(version_id), vector, model, k])
 
     rows
     |> Enum.with_index(1)

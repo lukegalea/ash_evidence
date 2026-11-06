@@ -35,7 +35,7 @@ defmodule AshEvidence.EvalSet do
 
   postgres do
     table "eval_sets"
-    repo AshEvidence.Repo
+    repo fn _resource, _type -> AshEvidence.repo() end
   end
 
   actions do

@@ -8,16 +8,16 @@ defmodule AshEvidence.Domain do
   addressed atoms, their retrieval projections, and the candidate sets
   retrieval records.
 
-  Hosts add this module to their `config :ash, ash_domains` (or call the
-  code interfaces directly — they are the intended surface). The code
-  interfaces mirror the slice-0 pipeline sequence: ingest a document
-  version, start a parse run, seed/record atoms, close the run — and the
-  retrieval seams: project an atom for the vector leg, record the
-  embedding the host's model produced.
+  Hosts call the code interfaces directly and do not list this module in
+  their `ash_domains`: the resources use `AshEvidence.repo/0`, and a listed
+  domain would make the host's `mix ash.codegen` write these tables into the
+  host's own migrations. The code interfaces mirror the slice-0 pipeline
+  sequence: ingest a document version, start a parse run, seed/record
+  atoms, close the run — and the retrieval seams: project an atom for the
+  vector leg, record the embedding the host's model produced.
 
   `validate_config_inclusion?: false` because this is a library-shipped
-  domain: it belongs in the HOST's `ash_domains`, never in this package's
-  own app config.
+  domain that is deliberately not in any app's `ash_domains`.
   """
 
   use Ash.Domain, validate_config_inclusion?: false
@@ -26,6 +26,7 @@ defmodule AshEvidence.Domain do
     resource AshEvidence.DocumentVersion do
       define :ingest_document, action: :ingest, args: [:kind, :bytes, :sha256]
       define :get_document_version, action: :read, get_by: [:id]
+      define :destroy_document_version, action: :destroy, get_by: [:id]
     end
 
     resource AshEvidence.ParseRun do

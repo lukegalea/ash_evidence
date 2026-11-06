@@ -42,7 +42,7 @@ defmodule AshEvidence.AtomRepresentation do
 
   postgres do
     table "atom_representations"
-    repo AshEvidence.Repo
+    repo fn _resource, _type -> AshEvidence.repo() end
 
     references do
       # Erasure linkage: representations are projections of content and die
@@ -56,6 +56,14 @@ defmodule AshEvidence.AtomRepresentation do
       # identity only indexes the atom side.
       index [:document_version_id]
     end
+  end
+
+  validations do
+    validate AshEvidence.Validations.VersionInTenant
+  end
+
+  preparations do
+    prepare AshEvidence.Preparations.VersionInTenant
   end
 
   actions do

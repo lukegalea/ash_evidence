@@ -53,6 +53,21 @@ defmodule AshEvidence do
   alias AshEvidence.Retrieval
 
   @doc """
+  The repo the evidence resources and retrieval use: `config :ash_evidence,
+  :repo, MyApp.Repo`, else `AshEvidence.Repo`.
+
+  Read at runtime. A host that points this at its own repo can write a
+  version and its own records in one transaction. All nine resources and
+  `AshEvidence.Retrieval` follow the setting together. The host repo must
+  have the `vector` extension, Postgrex `types:` including
+  `AshPostgres.Extensions.Vector`, PostgreSQL 18, `"ash-functions"` in
+  `installed_extensions/0` (the atomic close actions use `error/1`), and a
+  `default_prefix/0` naming the schema the evidence migrations ran into.
+  """
+  @spec repo() :: module()
+  def repo, do: Application.get_env(:ash_evidence, :repo, AshEvidence.Repo)
+
+  @doc """
   Retrieve candidates for `claim` over `version`'s addressed atoms —
   hybrid (lexical + vector when an embedding is supplied), dual-hypothesis
   (`:supports` / `:contradicts` by default, `:exception` opt-in). See

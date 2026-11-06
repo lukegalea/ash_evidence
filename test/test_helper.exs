@@ -42,6 +42,9 @@ db_tests? =
     Ecto.Adapters.SQL.Sandbox.mode(AshEvidence.Repo, :auto)
     Ecto.Migrator.run(AshEvidence.Repo, "priv/test_repo/migrations", :up, all: true)
     Ecto.Adapters.SQL.Sandbox.mode(AshEvidence.Repo, :manual)
+
+    {:ok, _} = AshEvidence.Test.HostRepo.start_link()
+    Ecto.Adapters.SQL.Sandbox.mode(AshEvidence.Test.HostRepo, :manual)
     true
   else
     false
