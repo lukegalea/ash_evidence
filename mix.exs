@@ -70,6 +70,7 @@ defmodule AshEvidence.MixProject do
       # introspection mandate in AGENTS.md ride on ash_agent_tools.
       # runtime: false and the hex package `files:` keep it out of
       # consumers' graphs either way.
+      {:ash_events, "~> 0.7", only: :test},
       {:ash_agent_tools,
        github: "lukegalea/ash_agent_tools", only: [:dev, :test], runtime: false},
 
