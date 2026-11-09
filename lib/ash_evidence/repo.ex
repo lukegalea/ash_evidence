@@ -15,8 +15,9 @@ defmodule AshEvidence.Repo do
   host configuration (`config :ash_evidence, AshEvidence.Repo, ...`), as is
   the database itself — a host points the package at its own database, in
   its own residency zone. The `priv` path for migrations is also host
-  config; the package's own suite uses `priv/test_repo` (see
-  `config/config.exs`).
+  config; hosts set `priv: "priv/repo"`, which holds only the package's
+  migrations. `priv/test_repo` holds the suite's test-host tables and is run by
+  the test helper alongside it (see `config/config.exs`).
 
   `btree_gist` is the Phase 0 (PostgreSQL 18) temporal-readiness floor
   (the ash_judgments posture): the later temporal surfaces build exclusion

@@ -56,7 +56,8 @@ Facts: stdout is pure JSON (parse it; don't eyeball); first invocation pays mix-
   ```
 
 - Schema changes go through `mix ash.codegen <name>` (migrations land in
-  `priv/test_repo/migrations`; the test helper applies them). CI checks
+  `priv/repo/migrations`, the path hosts configure; the test helper applies them and
+  also `priv/test_repo/migrations`, the hand-written test-host tables). CI checks
   `mix ash.codegen --check` stays clean via the test job's green run on fresh
   migrations — never hand-edit a generated migration's diff shape.
 - The iron-laws judge and docs validation are dev-env steps (`ash_agent_tools` and

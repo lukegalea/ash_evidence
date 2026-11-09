@@ -180,7 +180,8 @@ end
 
 The resources are package-owned and use `AshEvidence.repo/0` (`AshEvidence.Repo`
 by default); the host owns the database — point the repo at it
-(`config :ash_evidence, AshEvidence.Repo, ...`, including `priv:` for migrations and
+(`config :ash_evidence, AshEvidence.Repo, ...`, including `priv: "priv/repo"`, the
+package's migrations (ecto resolves it against this dependency's app dir), and
 `types:` for the pgvector encode/decode). Call the `AshEvidence.Domain` code
 interfaces directly and do not list the domain in your `config :ash, ash_domains`. PostgreSQL 18 is the
 declared floor (`min_pg_version/0`); `btree_gist`, `uuid-ossp`, `citext`,

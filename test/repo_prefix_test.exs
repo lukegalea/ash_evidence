@@ -17,7 +17,7 @@ defmodule AshEvidence.RepoPrefixTest do
   alias AshEvidence.Domain
   alias AshEvidence.Test.Fixtures
 
-  @migrations "priv/test_repo/migrations"
+  @migrations "priv/repo/migrations"
   @schema "host_owned"
 
   setup do
