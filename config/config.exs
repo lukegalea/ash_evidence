@@ -36,7 +36,7 @@ config :ash_evidence, AshEvidence.Repo,
   password: System.get_env("DB_PASSWORD", "postgres"),
   hostname: System.get_env("DB_HOST") || System.get_env("PGHOST") || "localhost",
   port: String.to_integer(System.get_env("PGPORT", "5432")),
-  priv: "priv/test_repo",
+  priv: "priv/repo",
   types: AshEvidence.PostgrexTypes
 
 if config_env() == :test do

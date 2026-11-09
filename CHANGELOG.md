@@ -28,6 +28,16 @@
   version outside that tenant is a validation error and reads filter by it. Without
   `tenant:` nothing changes. Packets and eval sets are not scoped themselves.
 
+### Changed
+
+- The package's migrations moved from `priv/test_repo/migrations` to
+  `priv/repo/migrations`, unchanged (same versions, module names and content), and
+  `priv/repo` is now in the Hex `files`. A host that set `priv: "priv/test_repo"`
+  must set `priv: "priv/repo"`; its `schema_migrations` rows stay valid. The
+  `test_host_assertions` and `test_host_event_log` tables (test-only, declared by no
+  package resource) stay in `priv/test_repo/migrations`, so a host no longer gets them.
+  A host that already ran them keeps the tables and may drop them.
+
 ### Added
 
 - `config :ash_evidence, :repo, MyApp.Repo` and `AshEvidence.repo/0`: all resources

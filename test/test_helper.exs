@@ -40,7 +40,15 @@ db_tests? =
     {:ok, _} = AshEvidence.Repo.start_link()
 
     Ecto.Adapters.SQL.Sandbox.mode(AshEvidence.Repo, :auto)
-    Ecto.Migrator.run(AshEvidence.Repo, "priv/test_repo/migrations", :up, all: true)
+    # The package's own migrations (what a host points at), then the test
+    # host's tables, which no package resource declares.
+    Ecto.Migrator.run(
+      AshEvidence.Repo,
+      ["priv/repo/migrations", "priv/test_repo/migrations"],
+      :up,
+      all: true
+    )
+
     Ecto.Adapters.SQL.Sandbox.mode(AshEvidence.Repo, :manual)
 
     {:ok, _} = AshEvidence.Test.HostRepo.start_link()

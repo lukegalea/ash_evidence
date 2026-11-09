@@ -91,7 +91,7 @@ defmodule AshEvidence.MixProject do
         "Usage rules" => "https://github.com/lukegalea/ash_evidence/blob/HEAD/usage-rules.md"
       },
       files:
-        ~w(lib mix.exs README.md CHANGELOG.md LICENSE LICENSES usage-rules.md docs .formatter.exs)
+        ~w(lib priv/repo mix.exs README.md CHANGELOG.md LICENSE LICENSES usage-rules.md docs .formatter.exs)
     ]
   end
 
