@@ -48,6 +48,7 @@ db_tests? =
       :up,
       all: true
     )
+
     Ecto.Adapters.SQL.Sandbox.mode(AshEvidence.Repo, :manual)
 
     {:ok, _} = AshEvidence.Test.HostRepo.start_link()
