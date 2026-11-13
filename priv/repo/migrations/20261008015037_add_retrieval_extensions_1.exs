@@ -11,7 +11,23 @@ defmodule AshEvidence.Repo.Migrations.AddRetrievalExtensions1 do
   use Ecto.Migration
 
   def up do
-    execute("CREATE EXTENSION IF NOT EXISTS \"vector\"")
+    # pgvector, but only where the server ships it. `IF NOT EXISTS` covers an
+    # extension already installed, not one the server lacks: that raises 0A000
+    # (`could not open extension control file`), and a host sharing a database
+    # whose image has no pgvector could not migrate at all. Without it the
+    # next migration leaves out `atom_representations.embedding`, and retrieval
+    # is lexical-only.
+    execute("""
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'vector') THEN
+        CREATE EXTENSION IF NOT EXISTS "vector";
+      ELSE
+        RAISE NOTICE 'pgvector is not available on this server; skipping. Retrieval is lexical-only.';
+      END IF;
+    END
+    $$;
+    """)
   end
 
   def down do

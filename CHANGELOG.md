@@ -37,6 +37,12 @@
   `test_host_assertions` and `test_host_event_log` tables (test-only, declared by no
   package resource) stay in `priv/test_repo/migrations`, so a host no longer gets them.
   A host that already ran them keeps the tables and may drop them.
+- The migrations run on a server without pgvector. `CREATE EXTENSION "vector"` runs
+  only where `pg_available_extensions` lists it, and `atom_representations.embedding`
+  is added only where the `vector` type then exists. Without it, retrieval is
+  lexical-only and an embedding cannot be stored. Before, such a server failed the
+  migration with 0A000. A database that already ran these migrations is unaffected;
+  one migrated without pgvector that later installs it has no `embedding` column.
 
 ### Added
 
