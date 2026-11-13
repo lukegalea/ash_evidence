@@ -185,7 +185,9 @@ package's migrations (ecto resolves it against this dependency's app dir), and
 `types:` for the pgvector encode/decode). Call the `AshEvidence.Domain` code
 interfaces directly and do not list the domain in your `config :ash, ash_domains`. PostgreSQL 18 is the
 declared floor (`min_pg_version/0`); `btree_gist`, `uuid-ossp`, `citext`,
-`ash-functions` and `vector` (pgvector) are the installed extensions.
+`ash-functions` and `vector` (pgvector) are the installed extensions. pgvector is
+optional: on a server without it the migrations skip it and the
+`atom_representations.embedding` column, and retrieval is lexical-only.
 
 The tables live in `public` unless the host says otherwise. A host that keeps its
 tables in a schema of its own sets `default_prefix:` and `migration_default_prefix:`

@@ -19,7 +19,10 @@ defmodule AshEvidence.Repo.Migrations.AddRetrieval do
     create table(:atom_representations, primary_key: false) do
       add(:id, :uuid, null: false, default: fragment("gen_random_uuid()"), primary_key: true)
       add(:representation, :text, null: false)
-      add(:embedding, :vector)
+
+      # Only where the previous migration could install pgvector.
+      if vector?(), do: add(:embedding, :vector)
+
       add(:embedding_model, :text)
       add(:embedding_model_version, :text)
 
@@ -89,6 +92,8 @@ defmodule AshEvidence.Repo.Migrations.AddRetrieval do
         ), null: false)
     end
   end
+
+  defp vector?, do: repo().query!("SELECT to_regtype('vector') IS NOT NULL").rows == [[true]]
 
   def down do
     drop(constraint(:candidate_sets, "candidate_sets_document_version_id_fkey"))
