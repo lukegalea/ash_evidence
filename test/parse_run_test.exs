@@ -10,7 +10,9 @@ defmodule AshEvidence.ParseRunTest do
 
   use ExUnit.Case, async: true
 
-  alias AshEvidence.ParseRun
+  require Ash.Query
+
+  alias AshEvidence.{Domain, ParseRun}
   alias AshEvidence.Test.Fixtures
 
   @moduletag :db
@@ -100,6 +102,91 @@ defmodule AshEvidence.ParseRunTest do
         action_def = Ash.Resource.Info.action(ParseRun, action)
         assert action_def.accept == []
       end
+    end
+  end
+
+  describe "record_check" do
+    defp runs_for(version) do
+      ParseRun
+      |> Ash.Query.filter(document_version_id == ^version.id)
+      |> Ash.read!(authorize?: false)
+    end
+
+    test "a passed check is one run, already closed :ok", %{version: version} do
+      config = %{"checked" => 3, "problems" => []}
+
+      assert {:ok, run} = Domain.record_check(version.id, "synthetic-check", config, true)
+
+      assert run.status == :ok
+      assert run.instrument == "synthetic-check"
+      assert run.config == config
+      assert run.document_version_id == version.id
+      assert [%{id: id, status: :ok}] = runs_for(version)
+      assert id == run.id
+    end
+
+    test "a failed check is one run, already closed :failed", %{version: version} do
+      assert {:ok, run} =
+               Domain.record_check(version.id, "synthetic-check", %{"problems" => ["x"]}, false)
+
+      assert run.status == :failed
+      assert [%{status: :failed}] = runs_for(version)
+    end
+
+    test "an errored or unmeasured check is never recorded as passed", %{version: version} do
+      # The outcomes a caller might hold for a check that did not pass cleanly: none is a
+      # boolean, so none is coerced into a pass, and nothing is written for any of them.
+      for outcome <- [nil, :errored, :unmeasured, "unmeasured", %{}, "maybe"] do
+        assert {:error, %Ash.Error.Invalid{}} =
+                 Domain.record_check(version.id, "synthetic-check", %{}, outcome)
+      end
+
+      assert runs_for(version) == []
+
+      # Recorded honestly instead, it is a failure.
+      assert {:ok, %{status: :failed}} =
+               Domain.record_check(
+                 version.id,
+                 "synthetic-check",
+                 %{"outcome" => "unmeasured"},
+                 false
+               )
+
+      refute Enum.any?(runs_for(version), &(&1.status == :ok))
+    end
+
+    test "status is not an input", %{version: version} do
+      assert {:error, %Ash.Error.Invalid{}} =
+               Ash.create(
+                 ParseRun,
+                 %{
+                   document_version_id: version.id,
+                   instrument: "x",
+                   status: :ok,
+                   passed?: false
+                 },
+                 action: :record_check,
+                 authorize?: false
+               )
+
+      assert runs_for(version) == []
+    end
+
+    test "a recorded check is terminal", %{version: version} do
+      {:ok, failed} = Domain.record_check(version.id, "synthetic-check", %{}, false)
+
+      assert {:error, %Ash.Error.Invalid{}} =
+               Ash.update(failed, %{}, action: :mark_ok, authorize?: false)
+
+      {:ok, passed} = Domain.record_check(version.id, "synthetic-check", %{}, true)
+
+      assert {:error, %Ash.Error.Invalid{}} =
+               Ash.update(passed, %{}, action: :mark_failed, authorize?: false)
+    end
+
+    test "the version reference is required" do
+      assert {:error, %Ash.Error.Invalid{}} =
+               Domain.record_check(nil, "synthetic-check", %{}, true)
     end
   end
 end
