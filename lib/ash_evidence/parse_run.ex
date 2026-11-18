@@ -20,6 +20,20 @@ defmodule AshEvidence.ParseRun do
   Instruments failing is a first-class outcome (`:failed`), recorded
   honestly rather than improvised.
 
+  ## A check whose outcome is known at once
+
+  A deterministic check (reading a rendered file back, comparing a digest)
+  has no instrument call to wait on: by the time there is anything to
+  record, the outcome is known. `record_check` writes that pass as one
+  closed run in a single insert — `:ok` when `passed?` is `true`, `:failed`
+  when it is `false` — so a run is never left `:pending` behind a check
+  that already ended, and there is no start-then-close pair to wrap in a
+  transaction. `passed?` is a required boolean: a check that errored or
+  could not measure is a `false`, never a missing value, and anything that
+  is not a boolean is refused before a row is written.
+
+      AshEvidence.Domain.record_check(version.id, "read_back", %{"checked" => 12}, true)
+
   `instrument` is free-form host vocabulary (which member, which pass) and
   `config` pins the declared invocation parameters — enough to reconstruct
   what the pass was, never enough to re-run it from here. No model id,
@@ -90,6 +104,19 @@ defmodule AshEvidence.ParseRun do
       primary? true
       accept [:document_version_id, :instrument, :config]
       # `status` is not accepted: a run starts pending, structurally.
+    end
+
+    create :record_check do
+      description "Record one deterministic check as a closed run: :ok when passed?, else :failed."
+      accept [:document_version_id, :instrument, :config]
+
+      argument :passed?, :boolean do
+        allow_nil? false
+
+        description "true only when the check ran and passed; an errored or unmeasured check is false."
+      end
+
+      change AshEvidence.Changes.CheckOutcome
     end
 
     update :mark_ok do

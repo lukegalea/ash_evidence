@@ -33,6 +33,10 @@ defmodule AshEvidence.Domain do
       define :start_parse_run, action: :start, args: [:document_version_id, :instrument]
       define :mark_parse_run_ok, action: :mark_ok
       define :mark_parse_run_failed, action: :mark_failed
+
+      define :record_check,
+        action: :record_check,
+        args: [:document_version_id, :instrument, :config, :passed?]
     end
 
     resource AshEvidence.AddressedAtom do

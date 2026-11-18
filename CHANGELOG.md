@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `ParseRun` `:record_check` and `AshEvidence.Domain.record_check/4-5`: records a
+  deterministic check whose outcome is already known as one closed run, in a single
+  insert — `:ok` when `passed?` is `true`, `:failed` when it is `false`. `passed?` is a
+  required boolean, so an errored or unmeasured outcome is refused rather than coerced.
+  Replaces the host pattern of `start_parse_run` then `mark_parse_run_ok/failed` inside
+  a transaction.
+
 ## 0.2.0
 
 ### Breaking

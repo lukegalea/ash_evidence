@@ -23,6 +23,10 @@ layer (`AshEvidence.EvalSet`, `AshEvidence.EvalItem`,
 - **Never call an instrument from this package.** No HTTP client, no Req, no
   model id, no endpoint, no key literal — in source, config or fixtures. The
   host starts a `ParseRun`, does its OCR/LLM work outside, and closes the run.
+  A deterministic check the host has already run is recorded with
+  `record_check(version_id, instrument, config, passed?)`: one run, closed on
+  insert. Pass `passed?: true` only for a check that ran and passed; an errored
+  or unmeasured check is `false`.
   The same applies to embeddings and adjudication: the host embeds and judges;
   `retrieve/3`, `record_embedding` and the aggregation only ever record, score
   and compose what the host computed.
