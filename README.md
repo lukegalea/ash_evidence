@@ -96,7 +96,7 @@ its own judge actions; this package records and composes):
 ```elixir
 evaluation = Domain.start_evaluation!(%{
   subject: %{type: "vendor", id: "v-1"},
-  predicate: "judgment:v0:coi#judgments/coverage_valid",
+  predicate: "judgment:v0:certificate#judgments/coverage_valid",
   document_version_id: version.id,
   question_set_hash: qset_hash,
   candidate_set_ids: [result.candidate_set_id],
