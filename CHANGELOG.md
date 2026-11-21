@@ -4,6 +4,12 @@
 
 ### Added
 
+- `AshEvidence.Explanation.provenance/3`: the atoms an observation cited, as `ash_provenance`
+  steps and gaps. A resolved atom is a `:was_derived_from` step; an id that does not resolve is
+  an `:erased` gap (with the erasure receipt and a `:was_invalidated_by` step when the host
+  supplies one), an `:unreadable` gap when `:existence_opts` shows the row still exists, or
+  `:not_recorded` for a cited id that is not a UUID. No atom text is read. Adds the
+  `ash_provenance` dependency.
 - `ParseRun` `:record_check` and `AshEvidence.Domain.record_check/4-5`: records a
   deterministic check whose outcome is already known as one closed run, in a single
   insert — `:ok` when `passed?` is `true`, `:failed` when it is `false`. `passed?` is a

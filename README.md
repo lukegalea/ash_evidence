@@ -119,6 +119,10 @@ packet = Domain.assemble_packet!(%{
 And for the review surface (AST-57 shape), the explanation data
 function — `AshEvidence.explanation(observations)` — resolves cited
 atom content at display time and never stores it.
+`AshEvidence.Explanation.provenance/3` answers the same question on the
+[`ash_provenance`](https://github.com/lukegalea/ash_provenance) contract, without reading any
+atom text: the atoms that still resolve are steps, and an id that does not is a typed gap
+(erased, unreadable or not recorded), never a silent drop.
 
 ## Provenance
 
