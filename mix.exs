@@ -66,6 +66,9 @@ defmodule AshEvidence.MixProject do
       # rather than riding transitively on ash.
       {:jason, "~> 1.4"},
 
+      # The plain-data contract the explanation functions return.
+      {:ash_provenance, github: "lukegalea/ash_provenance"},
+
       # Dev-and-test-only: the laws judge (`mix ash_agent.laws`) and the Ash
       # introspection mandate in AGENTS.md ride on ash_agent_tools.
       # runtime: false and the hex package `files:` keep it out of

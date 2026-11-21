@@ -60,6 +60,7 @@ defmodule AshEvidence.Explanation do
   end
 
   alias AshEvidence.AddressedAtom
+  alias AshProvenance.{Address, Gap, Step}
 
   require Ash.Query
 
@@ -97,6 +98,110 @@ defmodule AshEvidence.Explanation do
         unresolved_source_ids: unresolved
       }
     end)
+  end
+
+  @doc """
+  The provenance steps and gaps for the atoms an observation cited, on the `ash_provenance` contract.
+
+  `derived` is the `AshProvenance.Address` of the record that cites `atom_ids`, usually a judgment observation. Each
+  atom that still resolves for the reader gives a `:was_derived_from` step from `derived` to the atom's address
+  (`type: "addressed_atom"`, same base as `derived`). No atom text or geometry is read or returned.
+
+  An id that does not resolve for the reader gives a gap, never a silent drop:
+
+    * `:unreadable` when `:existence_opts` finds the row and the reader's read did not. The gap carries nothing else.
+    * `:erased` otherwise: the row is gone. When `:receipts` holds a trace reference for the id, the gap carries it
+      and a `:was_invalidated_by` step names it.
+    * `:not_recorded` for a cited id that is not a UUID, so it never named an atom.
+
+  Options:
+
+    * `:actor`, `:tenant`, `:authorize?` - the reader's read of the atoms.
+    * `:existence_opts` - read options (for example `[authorize?: false]`) used only to ask whether an id that did not
+      resolve still exists. Without it every unresolved id is `:erased`.
+    * `:receipts` - a map of atom id to the erasure receipt's trace reference (`"<type>:<id>"`).
+
+  The atoms are read in one query, and the existence check is a second one only when something did not resolve.
+  """
+  @spec provenance(Address.t(), [String.t()], keyword()) :: %{steps: [Step.t()], gaps: [Gap.t()]}
+  def provenance(%Address{} = derived, atom_ids, opts \\ []) when is_list(atom_ids) do
+    ids = Enum.uniq(atom_ids)
+    {uuids, malformed} = Enum.split_with(ids, &match?({:ok, _}, Ecto.UUID.cast(&1)))
+
+    found = read_created_at(uuids, Keyword.take(opts, [:actor, :tenant, :authorize?]))
+    {resolved, unresolved} = Enum.split_with(uuids, &Map.has_key?(found, &1))
+    existing = existing_ids(unresolved, opts[:existence_opts])
+    receipts = Map.new(opts[:receipts] || %{})
+
+    steps = Enum.map(resolved, &derived_step(derived, &1, found[&1]))
+
+    {gone, hidden} = Enum.split_with(unresolved, &(&1 not in existing))
+
+    erased = Enum.map(gone, &erased(derived, &1, receipts[&1]))
+
+    %{
+      steps: steps ++ Enum.flat_map(erased, &elem(&1, 0)),
+      gaps:
+        Enum.map(erased, &elem(&1, 1)) ++
+          Enum.map(hidden, fn _ -> Gap.new!(kind: :unreadable, of: derived) end) ++
+          Enum.map(malformed, fn _ ->
+            Gap.new!(kind: :not_recorded, of: derived, summary: "a cited id is not an atom id")
+          end)
+    }
+  end
+
+  defp atom_address(%Address{} = derived, id) do
+    Address.new!(base: derived.base, type: "addressed_atom", id: id)
+  end
+
+  defp derived_step(derived, id, created_at) do
+    Step.new!(
+      relation: :was_derived_from,
+      entity: derived,
+      antecedent: atom_address(derived, id),
+      at: created_at,
+      granularity: :record
+    )
+  end
+
+  defp erased(derived, id, nil) do
+    {[], Gap.new!(kind: :erased, of: derived, summary: "atom #{id} was erased")}
+  end
+
+  defp erased(derived, id, receipt) do
+    step =
+      Step.new!(
+        relation: :was_invalidated_by,
+        entity: atom_address(derived, id),
+        activity: receipt,
+        granularity: :record
+      )
+
+    {[step],
+     Gap.new!(kind: :erased, of: derived, receipt: receipt, summary: "atom #{id} was erased")}
+  end
+
+  defp read_created_at([], _opts), do: %{}
+
+  defp read_created_at(ids, opts) do
+    AddressedAtom
+    |> Ash.Query.for_read(:read, %{}, opts)
+    |> Ash.Query.filter(id in ^ids)
+    |> Ash.Query.select([:id, :created_at])
+    |> Ash.read!()
+    |> Map.new(&{&1.id, &1.created_at})
+  end
+
+  defp existing_ids([], _opts), do: []
+  defp existing_ids(_ids, nil), do: []
+
+  defp existing_ids(ids, opts) do
+    AddressedAtom
+    |> Ash.Query.for_read(:read, %{}, opts)
+    |> Ash.Query.filter(id in ^ids)
+    |> Ash.Query.select([:id])
+    |> Ash.read!()
+    |> Enum.map(& &1.id)
   end
 
   defp resolve_atoms(source_ids) do
